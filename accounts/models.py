@@ -27,41 +27,27 @@ class Profile(BaseModel):
     )
 
     profile_type = models.IntegerField(choices=ProfileTypes)
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    info = GenericForeignKey('content_type', 'object_id')
+    fullname = models.CharField(max_length=128)
+    contact = models.CharField(max_length=20, null=True, blank=True)
+    student_info = models.OneToOneField('StudentInfo', null=True,
+        on_delete=models.SET_NULL, related_name='profile')
+    staff_info = models.OneToOneField('StaffInfo', null=True,
+        on_delete=models.SET_NULL, related_name='profile')
+    
 
     def __str__(self):
         return f'Profile for {self.user.username}'
 
 
-class Info(BaseModel):
-    fullname = models.CharField(max_length=128)
-    contact = models.CharField(max_length=20, null=True, blank=True)
-    profile = GenericRelation(Profile)
-
-    class Meta:
-        abstract = True
-
-
-class StudentInfo(Info):
+class StudentInfo(BaseModel):
     roll_number = models.CharField(max_length=20)
     section = models.ForeignKey(Section, on_delete=models.SET_NULL, null=True,
                                 blank=True, related_name='students')
     date_enrolled = models.DateField(auto_now_add=True)
 
 
-class TeacherInfo(Info):
-    date_hired = models.DateField(auto_now_add=True)
-    salary = models.FloatField(default=0)
-
-
-class StaffInfo(Info):
+class StaffInfo(BaseModel):
     date_hired = models.DateField(auto_now_add=True)
     salary = models.FloatField(default=0)
     designation = models.CharField(max_length=128)
 
-
-class AdminInfo(Info):
-    date_hired = models.DateField(auto_now_add=True)
-    salary = models.FloatField(default=0)

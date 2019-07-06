@@ -30,7 +30,7 @@ class Command(BaseCommand):
                 s_user.set_password('student1234')
                 students.append(s_user)
 
-                info = models.StudentInfo(fullname=username, roll_number=username, section_id=s.id)
+                info = models.StudentInfo(roll_number=username, section_id=s.id)
                 student_infos.append(info)
 
             # Create users
@@ -46,7 +46,7 @@ class Command(BaseCommand):
             for student, info in zip(students, student_infos):
                 profile = models.Profile(
                     user_id=student.id, profile_type=models.Profile.STUDENT,
-                    info=info
+                    student_info=info, fullname=student.username
                 )
                 profiles.append(profile)
 
