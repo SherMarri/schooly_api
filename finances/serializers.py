@@ -1,10 +1,10 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from accounts.models import User
+from accounts import models as accounts_models
 from finances import models
 from structure.models import Grade
-
+import json
 
 class ExpenseCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -60,7 +60,41 @@ class CreateChallanSerializer(serializers.Serializer):
     target_value = serializers.JSONField()
 
     def save(self, **kwargs):
-        pass
+        data = self.validated_data
+        
+        if data['target_type'] == 'individuals':  # Fetch ids from target_value
+            ids = data['target_value']
+        else:
+            target_value = data['target_value']
+            if target_value['grade_id'] == -1:  # All grades
+                ids = [a[0] for a in accounts_models.StudentInfo.objects.filter(
+                    is_active=True).values_list('profile__user_id')]
+            else:
+                if target_value['section_id'] == -1:  # All sections of a grade
+                    ids = [a[0] for a in accounts_models.StudentInfo.objects.filter(
+                        is_active=True,
+                        section__grade_id=target_value['grade_id']
+                        ).values_list('profile__user_id')]
+                else:
+                    ids = [a[0] for a in accounts_models.StudentInfo.objects.filter(
+                        is_active=True,
+                        section_id=target_value['section_id']
+                        ).values_list('profile__user_id')]
+
+        challans = []
+        structure = models.FeeStructure.objects.get(id=data['structure_id'])
+        for id in ids:
+            challan = models.FeeChallan()
+            challan.student_id = id
+            challan.break_down = structure.break_down
+            challan.total = structure.total
+            challan.due_date = data['due_date']
+            challan.description = data['description']
+            
+            challans.append(challan)
+        
+        models.FeeChallan.objects.bulk_create(challans)
+
 
     def validate_structure_id(self, value):
         try:
@@ -81,7 +115,7 @@ class CreateChallanSerializer(serializers.Serializer):
         if target_type == 'individuals':
             try:
                 ids = value
-                count = User.objects.filter(id__in=ids).count()
+                count = accounts_models.User.objects.filter(id__in=ids).count()
                 if len(ids) == count:
                     return ids
                 raise serializers.ValidationError('Invalid student ids provided')
@@ -116,3 +150,26 @@ class CreateChallanSerializer(serializers.Serializer):
                     'grade_id': grade_id,
                     'section_id': section_id
                 }
+
+
+class FeeChallanSerializer(serializers.ModelSerializer):
+    break_down = serializers.SerializerMethodField()
+    student = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.FeeChallan
+        fields = ('id', 'student', 'break_down', 'total', 'paid', 'discount',
+            'due_date', 'paid_at', 'paid_by', 'description', 'received_by')
+        
+    def get_break_down(self, obj):
+        return json.loads(obj.break_down)
+
+    def get_student(self, obj):
+        return {
+            'id': obj.student.id,
+            'fullname': obj.student.profile.info.fullname
+        }
+
+class FeeChallanPaymentSerializer(serializers.Serializer):
+    paid = serializers.FloatField()
+    discount = serializers.FloatField()

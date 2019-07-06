@@ -63,12 +63,11 @@ class FeeStructure(BaseModel):
 class FeeChallan(BaseModel):
     student = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
                                 related_name='challans')
-    structure = models.ForeignKey(FeeStructure, on_delete=models.SET_NULL,
-                                  null=True, related_name='challans')
-    due_date = models.DateField()
+    break_down = models.TextField(max_length=2048)
     total = models.FloatField()
-    paid = models.FloatField(default=0, null=True, blank=True)
+    paid = models.FloatField(null=True, blank=True)
     discount = models.FloatField(default=0, null=True, blank=True)
+    due_date = models.DateField()
     paid_at = models.DateTimeField(null=True, blank=True)
     paid_by = models.CharField(max_length=20, null=True, blank=True)
     description = models.TextField(max_length=128, null=True, blank=True)

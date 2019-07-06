@@ -26,8 +26,8 @@ class FeeStructureAdmin(admin.ModelAdmin):
 
 
 class FeeChallanAdmin(admin.ModelAdmin):
-    list_display = ('student', 'structure', 'due_date', 'paid', 'discount', 'total')
-    list_display_links = ('student', 'structure',)
+    list_display = ('student', 'due_date', 'paid', 'discount', 'total')
+    list_display_links = ('student',)
 
 
 admin.site.register(models.IncomeCategory, IncomeCategoryAdmin)

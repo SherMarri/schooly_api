@@ -1,12 +1,13 @@
 import datetime
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.mixins import CreateModelMixin
+from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 
 from common.permissions import IsAdmin
 from finances import serializers, models
+from django.core.paginator import Paginator
 
 
 class ExpenseItemViewSet(ModelViewSet):
@@ -64,14 +65,58 @@ class FeeStructureViewSet(ModelViewSet):
     queryset = models.FeeStructure.objects.all()
 
 
-class ChallanViewSet(CreateModelMixin, GenericViewSet):
+class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
     permission_classes = (IsAdmin,)
-    queryset = models.FeeChallan.objects.all()
+    queryset = models.FeeChallan.objects.filter(is_active=True)
 
     def create(self, request, *args, **kwargs):
         data = request.data
         serializer = serializers.CreateChallanSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(status=status.HTTP_202_ACCEPTED,
-                        data=serializer.errors)
+        return Response(status=status.HTTP_202_ACCEPTED)
+        
+    def list(self, request):
+        params = request.query_params
+        queryset = self.get_queryset().select_related('student__profile')
+        queryset = self.apply_filters(queryset, params)
+        paginator = Paginator(queryset, 20)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        
+        serializer = serializers.FeeChallanSerializer(page, many=True)
+        return Response(status=status.HTTP_200_OK,
+            data= {
+                'data': serializer.data,
+                'page': page.number,
+                'count': paginator.count,
+            }
+        )
+
+    @action(detail=True, methods=['post'])
+    def pay(self, request, pk=None):
+        challan = self.get_object()
+        data = request.data
+        serializer = serializers.FeeChallanPaymentSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        challan.paid = challan.paid + data['paid'] if challan.paid else data['paid']
+        challan.discount = challan.discount
+        challan.paid_at = datetime.datetime.now()
+        challan.save()
+        serializer = serializers.FeeChallanSerializer(instance=challan)
+        return Response(
+            status=status.HTTP_200_OK,
+            data=serializer.data
+        )
+
+    def apply_filters(self, queryset, params):
+        if 'from' in params:
+            queryset = queryset.filter(due_date__gte=params['from'])
+
+        if 'to' in params:
+            queryset = queryset.filter(due_date__lte=params['to'])
+
+        return queryset
