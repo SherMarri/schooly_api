@@ -12,18 +12,21 @@ class JWTUserDetailsSerializer(serializers.Serializer):
         data = {
             'username': user.username,
             'role': user.profile.get_profile_type_display(),
-            'fullname': user.profile.info.fullname
+            'fullname': user.profile.fullname
         }
         return data
 
 
-class StudentInfoSerializer(serializers.ModelSerializer):
+class StudentProfileSerializer(serializers.ModelSerializer):
 
-    user_id = serializers.SerializerMethodField()
+    roll_number = serializers.SerializerMethodField()
 
     class Meta:
-        model = models.StudentInfo
+        model = models.Profile
         fields = ('id', 'fullname', 'roll_number', 'user_id')
 
-    def get_user_id(self, obj):
-        return obj.profile.first().user_id
+    def get_roll_number(self, obj):
+        try:
+            return obj.student_info.roll_number
+        except:
+            return None

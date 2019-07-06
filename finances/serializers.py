@@ -67,19 +67,26 @@ class CreateChallanSerializer(serializers.Serializer):
         else:
             target_value = data['target_value']
             if target_value['grade_id'] == -1:  # All grades
-                ids = [a[0] for a in accounts_models.StudentInfo.objects.filter(
-                    is_active=True).values_list('profile__user_id')]
+                ids = [a[0] for a in accounts_models.Profile.objects.filter(
+                    is_active=True, profile_type=accounts_models.Profile.STUDENT
+                ).values_list('user_id')]
             else:
                 if target_value['section_id'] == -1:  # All sections of a grade
-                    ids = [a[0] for a in accounts_models.StudentInfo.objects.filter(
+                    ids = [a[0] for a in accounts_models.Profile.objects.filter(
                         is_active=True,
-                        section__grade_id=target_value['grade_id']
-                        ).values_list('profile__user_id')]
+                        profile_type=accounts_models.Profile.STUDENT,
+                        student_info__section__grade_id=target_value['grade_id']
+                    ).values_list('user_id')]
                 else:
                     ids = [a[0] for a in accounts_models.StudentInfo.objects.filter(
                         is_active=True,
                         section_id=target_value['section_id']
                         ).values_list('profile__user_id')]
+                    ids = [a[0] for a in accounts_models.Profile.objects.filter(
+                        is_active=True,
+                        profile_type=accounts_models.Profile.STUDENT,
+                        student_info__section_id=target_value['section_id']
+                    ).values_list('user_id')]
 
         challans = []
         structure = models.FeeStructure.objects.get(id=data['structure_id'])
@@ -167,7 +174,7 @@ class FeeChallanSerializer(serializers.ModelSerializer):
     def get_student(self, obj):
         return {
             'id': obj.student.id,
-            'fullname': obj.student.profile.info.fullname
+            'fullname': obj.student.profile.fullname
         }
 
 class FeeChallanPaymentSerializer(serializers.Serializer):

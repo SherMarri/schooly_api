@@ -40,10 +40,10 @@ class StudentsAutocompleteAPIView(APIView):
         if q is None:  # Send empty list
             return Response(status=status.HTTP_200_OK, data=[])
 
-        queryset = models.StudentInfo.objects.filter(
-            Q(roll_number__icontains=q) | Q(fullname__icontains=q),
+        queryset = models.Profile.objects.filter(
+            Q(student_info__roll_number__icontains=q) | Q(fullname__icontains=q),
             is_active=True
         ).prefetch_related('profile')[:20]
 
-        serializer = serializers.StudentInfoSerializer(queryset, many=True)
+        serializer = serializers.StudentProfileSerializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
