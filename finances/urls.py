@@ -18,6 +18,10 @@ fees_router.register('challans', views.ChallanViewSet, base_name='fee-challans')
 
 urlpatterns = [
     path('expenses/', include(expenses_router.urls)),
+    url(r'^expenses/summary/$', views.ExpenseSummaryAPIView.as_view(),
+        name='expense-summary'),
+    url(r'^expenses/details/$', views.ExpenseDetailsAPIView.as_view(),
+    name='expense-details'),
     path('income/', include(income_router.urls)),
     path('fees/', include(fees_router.urls)),
 ]

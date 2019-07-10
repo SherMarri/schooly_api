@@ -65,7 +65,7 @@ class FeeChallan(BaseModel):
                                 related_name='challans')
     break_down = models.TextField(max_length=2048)
     total = models.FloatField()
-    paid = models.FloatField(null=True, blank=True)
+    paid = models.FloatField(default=0, null=True, blank=True)
     discount = models.FloatField(default=0, null=True, blank=True)
     due_date = models.DateField()
     paid_at = models.DateTimeField(null=True, blank=True)

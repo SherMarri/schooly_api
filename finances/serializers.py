@@ -174,9 +174,18 @@ class FeeChallanSerializer(serializers.ModelSerializer):
     def get_student(self, obj):
         return {
             'id': obj.student.id,
-            'fullname': obj.student.profile.fullname
+            'fullname': obj.student.profile.fullname,
+            'grade': obj.student.profile.student_info.section.grade.name,
+            'section': obj.student.profile.student_info.section.name,
         }
 
 class FeeChallanPaymentSerializer(serializers.Serializer):
     paid = serializers.FloatField()
     discount = serializers.FloatField()
+
+
+class ItemFilterSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    category_id = serializers.IntegerField(allow_null=True, required=False)
+    page = serializers.IntegerField(allow_null=True, required=False)
