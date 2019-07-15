@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from rest_framework import serializers
 
 from accounts import models as accounts_models
@@ -6,43 +7,40 @@ from finances import models
 from structure.models import Grade
 import json
 
-class ExpenseCategorySerializer(serializers.ModelSerializer):
+class TransactionCategorySerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.ExpenseCategory
-        fields = ('id', 'name', 'description')
+        model = models.TransactionCategory
+        fields = ('id', 'name', 'description', 'category_type')
 
 
-class ExpenseItemSerializer(serializers.ModelSerializer):
-    category = ExpenseCategorySerializer(read_only=True)
+class TransactionSerializer(serializers.ModelSerializer):
+    category = TransactionCategorySerializer(read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
-        write_only=True, queryset=models.ExpenseCategory.objects.all(),
+        write_only=True, queryset=models.TransactionCategory.objects.all(),
         source='category'
     )
 
     class Meta:
-        model = models.ExpenseItem
+        model = models.Transaction
         fields = ('id', 'title', 'category_id', 'category', 'description',
-                  'amount', 'date')
+                  'amount', 'account', 'transaction_type', 'account_balance',
+                  'created_by', 'created_at')
+        read_only_fields = ('account_balance', 'created_by', 'created_at')
 
-
-class IncomeCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.IncomeCategory
-        fields = ('id', 'name', 'description')
-
-
-class IncomeItemSerializer(serializers.ModelSerializer):
-    category = IncomeCategorySerializer(read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(
-        write_only=True, queryset=models.IncomeCategory.objects.all(),
-        source='category'
-    )
-
-    class Meta:
-        model = models.IncomeItem
-        fields = ('id', 'title', 'category_id', 'category', 'description',
-                  'amount', 'date')
-
+    def create(self, validated_data):
+        data = validated_data
+        data['created_by'] = self.context['user']
+        if data['transaction_type'] == models.CREDIT:
+            data['account_balance'] = data['account'].balance - data['amount']
+        else:
+            data['account_balance'] = data['account'].balance + data['amount']
+        with transaction.atomic():
+            instance = models.Transaction.objects.create(**validated_data)
+            account = validated_data['account']
+            account.balance = data['account_balance']
+            account.save()
+        return instance
+        
 
 class FeeStructureSerializer(serializers.ModelSerializer):
 

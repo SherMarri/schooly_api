@@ -1,4 +1,4 @@
-import datetime
+from datetime import date, timedelta, datetime
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.decorators import action
@@ -10,28 +10,88 @@ from common.permissions import IsAdmin
 from finances import serializers, models
 from django.core.paginator import Paginator
 import json
+from common.models import Config
 
-
-class ExpenseItemViewSet(ModelViewSet):
+class TransactionViewSet(CreateModelMixin, GenericViewSet):
     permission_classes = (IsAdmin,)
-    serializer_class = serializers.ExpenseItemSerializer
+    serializer_class = serializers.TransactionSerializer
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.transaction_type = kwargs.get('transaction_type', None)
 
     def get_queryset(self):
         """
         Needs to be refined
         :return: Queryset with expense items
         """
-        return models.ExpenseItem.objects.filter(is_active=True).order_by('-date')
+        return models.Transaction.objects.filter(
+            transaction_type=self.transaction_type
+        ).select_related('category').order_by('-created_by')
 
     @action(detail=False)
     def today(self, request):
-        queryset = self.get_queryset().filter(date=datetime.date.today())
+        queryset = self.get_queryset().filter(created_at__date=date.today())
         serializer = self.get_serializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
+    def create(self, request):
+        context = {
+            'user': request.user,
+            'transaction_type': self.transaction_type
+        }
+        result = self.create_transaction(request.data, context)
+        if result['success']:
+            return Response(
+                status=status.HTTP_200_OK,
+                data=result['data']
+            )
+        else:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data=results['errors']
+            )
 
-class ExpenseSummaryAPIView(APIView):
+    @staticmethod
+    def create_transaction(data, context):
+        default_account = models.Account.objects.filter(is_default=True).first()
+        data = data.copy()
+        data['account'] = default_account.id
+        data['transaction_type'] = context['transaction_type']
+        serializer = TransactionViewSet.serializer_class(data=data, context=context)
+        if not serializer.is_valid():
+            return {
+                'success': False,
+                'errors': serializer.errors
+            }
+            
+        serializer.save()
+        return {
+            'success': True,
+            'data': serializer.data
+        }
+        
+
+class ExpenseItemViewSet(TransactionViewSet):
+
+    def __init__(self, **kwargs):
+        kwargs['transaction_type'] = models.CREDIT
+        super().__init__(**kwargs)
+
+
+class IncomeItemViewSet(TransactionViewSet):
+
+    def __init__(self, **kwargs):
+        kwargs['transaction_type'] = models.DEBIT
+        super().__init__(**kwargs)
+
+
+class TransactionSummaryAPIView(APIView):
     permission_classes = (IsAdmin,)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.transaction_type = kwargs.get('transaction_type', None)
 
     def get(self, request):
         """
@@ -46,13 +106,14 @@ class ExpenseSummaryAPIView(APIView):
         """
 
         results = {}
-        today = datetime.date.today()
+        today = date.today()
         year = today.year
         month = today.month
 
         # 1, 5
-        yearly_aggregates = models.ExpenseItem.objects.filter(
-            date__year=year
+        yearly_aggregates = models.Transaction.objects.filter(
+            created_at__year=year,
+            transaction_type=self.transaction_type
         ).aggregate(
             total=Sum('amount'), average=Avg('amount')
         )
@@ -60,46 +121,63 @@ class ExpenseSummaryAPIView(APIView):
         results['average_item'] = yearly_aggregates['average']
 
         # 2, 3, 4, 6
-        category_aggregates = models.ExpenseCategory.objects.filter(
-            is_active=True
+        category_aggregates = models.TransactionCategory.objects.filter(
+            category_type=self.transaction_type
         ).annotate(
-            total_items=Count('items', filter=Q(items__date__year=year)),
-            yearly_amount=Sum('items__amount', filter=Q(items__date__year=year)),
-            monthly_amount=Sum('items__amount',
-                filter=Q(items__date__month=month, items__date__year=year)
+            total_transactions=Count('transactions', filter=Q(transactions__created_at__year=year)),
+            yearly_amount=Sum('transactions__amount', filter=Q(transactions__created_at__year=year)),
+            monthly_amount=Sum('transactions__amount',
+                filter=Q(transactions__created_at__month=month, transactions__created_at__year=year)
             )
-        )
+        ).filter(total_transactions__gt=0)
 
         results['category_wise_data'] = [{
             'name': c.name,
-            'item_count': c.total_items,
-            'yearly_total': c.yearly_amount,
-            'monthly_total': c.monthly_amount
+            'item_count': c.total_transactions,
+            'yearly_total': c.yearly_amount if c.yearly_amount else 0,
+            'monthly_total': c.monthly_amount if c.monthly_amount else 0,
         } for c in category_aggregates]
 
         # 7
-        current_month_items = models.ExpenseItem.objects.filter(
-            date__lte=today, date__year=year, date__month=month
+        current_month_items = models.Transaction.objects.filter(
+            transaction_type=self.transaction_type,
+            created_at__year=year, created_at__month=month
         )
         
         monthly_total = 0
         daily_total = {day: 0 for day in range(1,today.day+1)}
         for item in current_month_items:
-            daily_total[item.date.day] += item.amount
+            daily_total[item.created_at.day] += item.amount
             monthly_total += item.amount
         results['monthly_total'] = monthly_total
         results['daily_total'] = daily_total 
         return Response(status=status.HTTP_200_OK, data=results)
+
+class ExpenseSummaryAPIView(TransactionSummaryAPIView):
+    def __init__(self, **kwargs):
+        kwargs['transaction_type'] = models.CREDIT
+        super().__init__(**kwargs)
+
+
+class IncomeSummaryAPIView(TransactionSummaryAPIView):
+    def __init__(self, **kwargs):
+        kwargs['transaction_type'] = models.DEBIT
+        super().__init__(**kwargs)
+    
     
 
-class ExpenseDetailsAPIView(APIView):
+class TransactionDetailsAPIView(APIView):
     permission_classes = (IsAdmin,)
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.transaction_type = kwargs.get('transaction_type', None)
 
     def get(self, request):
         """
         Returns following information:
-        1. Paginated expense items falling in the search criteria
-        2. Category-wise expenses if category is 'none' or 'all'
+        1. Paginated transaction items falling in the search criteria
+        2. Category-wise transactions if category is 'none' or 'all'
         """
         params = request.query_params
 
@@ -110,83 +188,91 @@ class ExpenseDetailsAPIView(APIView):
                 data=filter_serializer.errors
             )
 
-        date_range = (filter_serializer.validated_data['start_date'],
-            filter_serializer.validated_data['end_date'],
+        date_range = (
+            filter_serializer.validated_data['start_date'],
+            filter_serializer.validated_data['end_date'] + timedelta(days=1)
         )
-        queryset = models.ExpenseItem.objects.filter(date__range=date_range)
+        queryset = models.Transaction.objects.filter(
+            created_at__range=date_range
+        ).select_related('category')
+        if self.transaction_type:
+            queryset = queryset.filter(transaction_type=self.transaction_type)
+
         results = {}
         if 'category_id' in filter_serializer.validated_data and \
             filter_serializer.validated_data['category_id'] != -1:
             category_id = filter_serializer.validated_data['category_id']
             queryset = queryset.filter(category_id=category_id)
         elif 'page' not in params:  # Send category wise data as well
-            category_aggregates = models.ExpenseCategory.objects.filter(
-                is_active=True
+            category_aggregates = models.TransactionCategory.objects.filter(
+                category_type=self.transaction_type
             ).annotate(
-                total_amount=Sum('items__amount', filter=Q(items__date__range=date_range))
-            )
+                total_amount=Sum(
+                    'transactions__amount',
+                    filter=Q(transactions__created_at__range=date_range)
+                )
+            ).filter(total_amount__gt=0)
             category_wise_data = [{
                 'id':  c.id,
                 'name': c.name,
-                'total_amount': c.total_amount
+                'total_amount': c.total_amount if c.total_amount else 0
             } for c in category_aggregates]
             results['category_wise_data'] = category_wise_data
 
-        queryset = queryset.select_related('category')
         paginator = Paginator(queryset, 20)
         if 'page' in params:
             page = paginator.page(int(params['page']))
         else:
             page = paginator.page(1)
-            aggregate_queryset = models.ExpenseItem.objects.filter(
-                date__range=date_range
+            aggregate_queryset = models.TransactionCategory.objects.filter(
+                category_type=self.transaction_type,
+                transactions__created_at__range=date_range
             )
             if 'category_id' in filter_serializer.validated_data and \
                 filter_serializer.validated_data['category_id'] != -1:
                 category_id = filter_serializer.validated_data['category_id']
-                aggregate_queryset = aggregate_queryset.filter(category_id=category_id)
+                aggregate_queryset = aggregate_queryset.filter(id=category_id)
             
-            yearly_aggregates = aggregate_queryset.aggregate(total=Sum('amount'))
+            yearly_aggregates = aggregate_queryset.aggregate(
+                total=Sum('transactions__amount')
+            )
             results['sum'] = yearly_aggregates['total']
         
-        serializer = serializers.ExpenseItemSerializer(page, many=True)
+        serializer = serializers.TransactionSerializer(page, many=True)
         results['data'] = serializer.data
         results['page'] = page.number
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK,
             data=results 
         )
+        
+
+class ExpenseDetailsAPIView(TransactionDetailsAPIView):
+    def __init__(self, **kwargs):
+        kwargs['transaction_type'] = models.CREDIT
+        super().__init__(**kwargs)
+
+
+class IncomeDetailsAPIView(TransactionDetailsAPIView):
+    def __init__(self, **kwargs):
+        kwargs['transaction_type'] = models.DEBIT
+        super().__init__(**kwargs)
 
 
 class ExpenseCategoryViewSet(ModelViewSet):
     permission_classes = (IsAdmin,)
-    serializer_class = serializers.ExpenseCategorySerializer
-    queryset = models.ExpenseCategory.objects.all()
-
-
-class IncomeItemViewSet(ModelViewSet):
-    permission_classes = (IsAdmin,)
-    serializer_class = serializers.IncomeItemSerializer
-
-    def get_queryset(self):
-        """
-        Needs to be refined
-        :return: Queryset with income items
-        """
-        return models.IncomeItem.objects.all().order_by('-date')
-
-    @action(detail=False)
-    def today(self, request):
-        # queryset = self.get_queryset().filter(date=datetime.date.today())
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(status=status.HTTP_200_OK, data=serializer.data)
+    serializer_class = serializers.TransactionCategorySerializer
+    queryset = models.TransactionCategory.objects.filter(
+        category_type=models.CREDIT
+    )
 
 
 class IncomeCategoryViewSet(ModelViewSet):
     permission_classes = (IsAdmin,)
-    serializer_class = serializers.IncomeCategorySerializer
-    queryset = models.IncomeCategory.objects.all()
+    serializer_class = serializers.TransactionCategorySerializer
+    queryset = models.TransactionCategory.objects.filter(
+        category_type=models.DEBIT
+    )
 
 
 class FeeStructureViewSet(ModelViewSet):
@@ -236,13 +322,30 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         data = serializer.validated_data
         challan.paid = challan.paid + data['paid'] if challan.paid else data['paid']
         challan.discount = challan.discount
-        challan.paid_at = datetime.datetime.now()
+        challan.paid_at = datetime.now()
         challan.save()
+        self.add_to_transactions(challan, data['paid'])
         serializer = serializers.FeeChallanSerializer(instance=challan)
         return Response(
             status=status.HTTP_200_OK,
             data=serializer.data
         )
+
+    def add_to_transactions(self, challan, amount):
+        fees_category_id = Config.objects.filter(
+            name='FEES_CATEGORY_ID'
+        ).first().value
+        data = {
+            'title': 'Invoice #: {0}'.format(challan.id),
+            'category_id': fees_category_id,
+            'amount': amount,
+        }
+        context = {
+            'user': self.request.user,
+            'transaction_type': models.DEBIT,
+        }
+        results = TransactionViewSet.create_transaction(data, context)
+        # TODO rollback payment incase of failure
 
     def apply_filters(self, queryset, params):
         if 'from' in params:

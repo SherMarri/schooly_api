@@ -21,7 +21,11 @@ urlpatterns = [
     url(r'^expenses/summary/$', views.ExpenseSummaryAPIView.as_view(),
         name='expense-summary'),
     url(r'^expenses/details/$', views.ExpenseDetailsAPIView.as_view(),
-    name='expense-details'),
+        name='expense-details'),
+    url(r'^income/details/$', views.IncomeDetailsAPIView.as_view(),
+        name='income-details'),
+    url(r'^income/summary/$', views.IncomeSummaryAPIView.as_view(),
+        name='income-summary'),
     path('income/', include(income_router.urls)),
     path('fees/', include(fees_router.urls)),
 ]

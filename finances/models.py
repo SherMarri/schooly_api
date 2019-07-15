@@ -4,51 +4,51 @@ from accounts.models import User
 from common.models import BaseModel
 
 
-class IncomeCategory(BaseModel):
+DEBIT = 1
+CREDIT = 2
+
+class Account(BaseModel):
+    name = models.CharField(max_length=20, unique=True)
+    description = models.TextField(max_length=512, null=True, blank=True)
+    balance = models.FloatField(default=0)
+    is_default = models.NullBooleanField(null=True, blank=True)
+    
+
+class TransactionCategory(BaseModel):
+
+    TypeChoices = (
+        (DEBIT, 'Income'),
+        (CREDIT, 'Expense')
+    )
+
     name = models.CharField(max_length=20)
     description = models.TextField(max_length=512, null=True, blank=True)
+    category_type = models.IntegerField(choices=TypeChoices)
 
     class Meta:
-        verbose_name_plural = 'Income Categories'
+        verbose_name_plural = 'Transaction Categories'
 
     def __str__(self):
         return self.name
 
 
-class IncomeItem(BaseModel):
-    title = models.CharField(max_length=128)
-    category = models.ForeignKey(IncomeCategory, on_delete=models.SET_NULL,
-                                 null=True, blank=True, related_name='items')
+class Transaction(BaseModel):
+    account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    title = models.CharField(max_length=20)
     description = models.TextField(max_length=512, null=True, blank=True)
+    category = models.ForeignKey(TransactionCategory, on_delete=models.CASCADE,
+        related_name='transactions')
     amount = models.FloatField()
-    date = models.DateField()
-
-    def __str__(self):
-        return self.title
-
-
-class ExpenseCategory(BaseModel):
-    name = models.CharField(max_length=20)
-    description = models.TextField(max_length=512, null=True, blank=True)
-
-    class Meta:
-        verbose_name_plural = 'Expense Categories'
-
-    def __str__(self):
-        return self.name
-
-
-class ExpenseItem(BaseModel):
-    title = models.CharField(max_length=128)
-    category = models.ForeignKey(ExpenseCategory, on_delete=models.SET_NULL,
-                                 null=True, blank=True, related_name='items')
-    description = models.CharField(max_length=512, null=True, blank=True)
-    amount = models.FloatField()
-    date = models.DateField()
-
-    def __str__(self):
-        return self.title
-
+    account_balance = models.FloatField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+        related_name='created_transactions')
+    
+    TypeChoices = (
+        (DEBIT, 'Debit'),
+        (CREDIT, 'Credit')
+    )
+    transaction_type = models.IntegerField(choices=TypeChoices)
+    
 
 class FeeStructure(BaseModel):
     name = models.CharField(max_length=20)
