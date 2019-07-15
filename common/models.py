@@ -12,3 +12,12 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class Config(BaseModel):
+    name = models.CharField(max_length=20)
+    description = models.TextField(max_length=500, null=True, blank=True)
+    value = models.IntegerField()
+
+    def __str__(self):
+        return self.name
