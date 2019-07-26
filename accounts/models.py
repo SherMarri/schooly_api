@@ -8,6 +8,12 @@ from structure.models import Section
 
 User = get_user_model()
 
+MALE = 1
+FEMALE = 2
+GenderTypes = (
+    (MALE, 'Male'),
+    (FEMALE, 'Female'),
+)
 
 class Profile(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -40,14 +46,22 @@ class Profile(BaseModel):
 
 
 class StudentInfo(BaseModel):
-    roll_number = models.CharField(max_length=20)
+    roll_number = models.CharField(max_length=20, unique=True)
     section = models.ForeignKey(Section, on_delete=models.SET_NULL, null=True,
                                 blank=True, related_name='students')
-    date_enrolled = models.DateField(auto_now_add=True)
+    date_enrolled = models.DateField(null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    blood_group = models.CharField(max_length=3, null=True, blank=True)
+    address = models.TextField(max_length=128, null=True, blank=True)
+    guardian_name = models.CharField(max_length=128, null=True, blank=True)
+    guardian_contact = models.CharField(max_length=20, null=True, blank=True)
+    gender = models.IntegerField(choices=GenderTypes, default=MALE)
+
+    def __str__(self):
+        return self.roll_number
 
 
 class StaffInfo(BaseModel):
     date_hired = models.DateField(auto_now_add=True)
     salary = models.FloatField(default=0)
     designation = models.CharField(max_length=128)
-
