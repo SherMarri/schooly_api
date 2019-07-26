@@ -28,4 +28,8 @@ urlpatterns = [
         name='income-summary'),
     path('income/', include(income_router.urls)),
     path('fees/', include(fees_router.urls)),
+    url(r'^fees/challans/download_csv',
+        view=views.download_challans_csv,
+        name='challans-download-csv'
+    )
 ]

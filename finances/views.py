@@ -11,6 +11,14 @@ from finances import serializers, models
 from django.core.paginator import Paginator
 import json
 from common.models import Config
+from django.http import HttpResponse
+import os
+import datetime
+import csv
+from django.conf import LazySettings
+
+settings = LazySettings()
+
 
 class TransactionViewSet(CreateModelMixin, GenericViewSet):
     permission_classes = (IsAdmin,)
@@ -296,8 +304,11 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         params = request.query_params
         queryset = self.get_queryset().select_related(
             'student__profile__student_info__section__grade'
-            )
+        )
         queryset = self.apply_filters(queryset, params)
+        if 'download' in params and params['download'] == 'true':
+            return self.get_downloadable_link(queryset)
+        
         paginator = Paginator(queryset, 20)
         if 'page' in params:
             page = paginator.page(int(params['page']))
@@ -312,6 +323,41 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
                 'count': paginator.count,
             }
         )
+    
+    @staticmethod
+    def get_downloadable_link(queryset):
+        timestamp = datetime.datetime.now().strftime("%f")
+        file_name = f'fees_{timestamp}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([
+                'Invoice #', 'Roll #', 'Name', 'Section', 'Fee', 'Paid', 'Discount', 'Due Date', 'Status',
+            ])
+            for challan in queryset:
+                writer.writerow(ChallanViewSet.get_csv_row(challan))
+        return Response(file_name, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_csv_row(challan):
+        if challan.paid:
+            if challan.discount:
+                status = 'Paid' if challan.paid + challan.discount >= challan.total else 'Unpaid'
+            else:
+                status = 'Paid' if challan.paid >= challan.total else 'Unpaid'
+        else:
+            status = 'Unpaid'
+
+        return [
+            challan.id,
+            challan.student.profile.student_info.roll_number,
+            challan.student.profile.fullname,
+            f'Class {challan.student.profile.student_info.section.grade.name} - {challan.student.profile.student_info.section.name}',
+            challan.total,
+            challan.paid,
+            challan.discount,
+            challan.due_date,
+            status,
+        ]
 
     @action(detail=True, methods=['post'])
     def pay(self, request, pk=None):
@@ -376,4 +422,20 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
                     Q(total__gt = F('paid') + F('discount')) | Q(paid__isnull=True),
                 )
 
+        if 'search_term' in params and params['search_term'] != '':
+            q = params['search_term']
+            queryset = queryset.filter(
+                Q(student__profile__student_info__roll_number__icontains=q) | 
+                Q(student__profile__fullname__icontains=q),
+            )
+
         return queryset
+    
+
+def download_challans_csv(request):
+    file_name = request.GET.get('file_name', None)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+    file = open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'))
+    response.content = file
+    return response
