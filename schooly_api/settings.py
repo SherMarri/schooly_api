@@ -26,7 +26,7 @@ SECRET_KEY = '1m7+2)t&py&i77yv(4hg03cuivf4-565$t6zsb01h1ac6*a1)2'
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'localhost', 
+    'localhost:3000', 
     '167.71.51.236', 
     'schooli.app',
     'http://schooli.app', 
@@ -67,7 +67,7 @@ REST_USE_JWT = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # No email verification required
 
 CORS_ORIGIN_WHITELIST = (
-    'localhost', 
+    'localhost:3000', 
     '167.71.51.236', 
     'schooli.app',
     'http://schooli.app', 
