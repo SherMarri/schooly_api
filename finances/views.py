@@ -365,7 +365,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         serializer = serializers.FeeChallanPaymentSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        challan.paid = challan.paid + data['paid'] if challan.paid else data['paid']
+        challan.paid = challan.paid + data['paid']
         challan.discount = challan.discount
         challan.paid_at = datetime.now()
         challan.save()
