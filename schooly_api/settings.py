@@ -69,6 +69,7 @@ CORS_ORIGIN_WHITELIST = (
     'http://167.71.51.236',
     'http://schooli.app/',
     'https://schooli.app/'
+    'http://www.schooli.app'    
     'https://www.schooli.app'
 )
 
