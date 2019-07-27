@@ -1,4 +1,5 @@
 amqp==2.4.2
+astroid==2.2.5
 billiard==3.6.0.0
 celery==4.3.0
 certifi==2019.3.9
@@ -11,9 +12,15 @@ django-rest-auth==0.9.5
 djangorestframework==3.9.4
 djangorestframework-jwt==1.11.0
 idna==2.8
+isort==4.3.20
 kombu==4.5.0
+lazy-object-proxy==1.4.1
+mccabe==0.6.1
 oauthlib==3.0.1
+pkg-resources==0.0.0
+psycopg2==2.8.3
 PyJWT==1.7.1
+pylint==2.3.1
 python3-openid==3.1.0
 pytz==2019.1
 requests==2.21.0
@@ -22,5 +29,7 @@ Serializer==0.2.1
 simplejson==3.16.0
 six==1.12.0
 sqlparse==0.3.0
+typed-ast==1.4.0
 urllib3==1.24.3
 vine==1.3.0
+wrapt==1.11.2
