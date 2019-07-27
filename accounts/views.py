@@ -46,7 +46,7 @@ class StudentsAutocompleteAPIView(APIView):
 
         queryset = models.Profile.objects.filter(
             Q(student_info__roll_number__icontains=q) | Q(fullname__icontains=q),
-            is_active=True
+            student_info_id__isnull=False, is_active=True
         ).select_related('student_info')[:20]
 
         serializer = serializers.StudentProfileSerializer(queryset, many=True)
