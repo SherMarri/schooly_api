@@ -325,7 +325,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
     
     @staticmethod
     def get_downloadable_link(queryset):
-        timestamp = datetime.datetime.now().strftime("%f")
+        timestamp = datetime.now().strftime("%f")
         file_name = f'fees_{timestamp}.csv'
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
