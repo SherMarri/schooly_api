@@ -25,7 +25,12 @@ SECRET_KEY = '1m7+2)t&py&i77yv(4hg03cuivf4-565$t6zsb01h1ac6*a1)2'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '167.71.51.236']
+ALLOWED_HOSTS = [
+    'localhost', 
+    '167.71.51.236', 
+    'http://schooli.app/', 
+    'https://schooli.app/'
+]
 
 
 # Application definition
@@ -61,6 +66,8 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'  # No email verification required
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:3000',
     'http://167.71.51.236',
+    'http://schooli.app/',
+    'https://schooli.app/'
 )
 
 REST_AUTH_SERIALIZERS = {
