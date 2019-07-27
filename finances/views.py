@@ -13,7 +13,6 @@ import json
 from common.models import Config
 from django.http import HttpResponse
 import os
-import datetime
 import csv
 from django.conf import LazySettings
 
