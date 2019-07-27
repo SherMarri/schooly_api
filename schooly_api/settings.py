@@ -28,8 +28,9 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost', 
     '167.71.51.236', 
-    'http://schooli.app/', 
-    'https://schooli.app/'
+    'schooli.app',
+    'http://schooli.app', 
+    'https://schooli.app'
 ]
 
 
