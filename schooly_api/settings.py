@@ -30,7 +30,7 @@ ALLOWED_HOSTS = [
     '167.71.51.236', 
     'schooli.app',
     'http://schooli.app', 
-    'https://schooli.app'
+    'https://www.schooli.app'
 ]
 
 
