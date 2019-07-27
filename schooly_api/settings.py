@@ -30,8 +30,9 @@ ALLOWED_HOSTS = [
     '167.71.51.236', 
     'schooli.app',
     'http://schooli.app', 
+    'https://schooli.app', 
     'http://www.schooli.app', 
-    'https://www.schooli.app'
+    'https://www.schooli.app',
 ]
 
 
@@ -66,12 +67,13 @@ REST_USE_JWT = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # No email verification required
 
 CORS_ORIGIN_WHITELIST = (
-    'http://localhost:3000',
-    'http://167.71.51.236',
-    'http://schooli.app/',
-    'https://schooli.app/'
-    'http://www.schooli.app'    
-    'https://www.schooli.app'
+    'localhost', 
+    '167.71.51.236', 
+    'schooli.app',
+    'http://schooli.app', 
+    'https://schooli.app', 
+    'http://www.schooli.app', 
+    'https://www.schooli.app',
 )
 
 REST_AUTH_SERIALIZERS = {
