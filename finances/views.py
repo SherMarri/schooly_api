@@ -348,7 +348,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
 
         return [
             challan.id,
-            challan.student.profile.student_info.roll_number,
+            challan.student.profile.student_info.gr_number,
             challan.student.profile.fullname,
             f'Class {challan.student.profile.student_info.section.grade.name} - {challan.student.profile.student_info.section.name}',
             challan.total,
@@ -424,7 +424,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         if 'search_term' in params and params['search_term'] != '':
             q = params['search_term']
             queryset = queryset.filter(
-                Q(student__profile__student_info__roll_number__icontains=q) | 
+                Q(student__profile__student_info__gr_number__icontains=q) | 
                 Q(student__profile__fullname__icontains=q),
             )
 

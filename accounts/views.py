@@ -18,7 +18,7 @@ settings = LazySettings()
 class CustomLoginView(LoginView):
     def get_response(self):
         serializer_class = self.get_response_serializer()
-
+  
         if getattr(settings, 'REST_USE_JWT', False):
             data = {
                 'user': self.user,
@@ -45,7 +45,7 @@ class StudentsAutocompleteAPIView(APIView):
             return Response(status=status.HTTP_200_OK, data=[])
 
         queryset = models.Profile.objects.filter(
-            Q(student_info__roll_number__icontains=q) | Q(fullname__icontains=q),
+            Q(student_info__gr_number__icontains=q) | Q(fullname__icontains=q),
             student_info_id__isnull=False, is_active=True
         ).select_related('student_info')[:20]
 
@@ -141,7 +141,7 @@ class StudentAPIView(APIView):
     @staticmethod
     def get_csv_row(profile):
         return [
-            profile.student_info.roll_number, profile.fullname,
+            profile.student_info.gr_number, profile.fullname,
             f'Class {profile.student_info.section.grade.name} - {profile.student_info.section.name}',
             profile.student_info.guardian_name,
             profile.student_info.guardian_contact,
@@ -177,7 +177,7 @@ class StudentAPIView(APIView):
         if 'search_term' in params and len(params['search_term']) > 0:
             q = params['search_term']
             queryset = queryset.filter(
-                Q(student_info__roll_number__icontains=q) | Q(fullname__icontains=q),
+                Q(student_info__gr_number__icontains=q) | Q(fullname__icontains=q),
             )
         
         queryset = queryset.select_related('student_info__section__grade')
