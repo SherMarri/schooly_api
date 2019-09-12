@@ -163,7 +163,7 @@ class StudentAPIView(APIView):
         queryset = models.Profile.objects.filter(
             is_active=True, student_info_id__isnull=False,
         )
-        
+
         if 'grade_id' in params and params['grade_id'] != '-1':
             if 'section_id' in params and params['section_id'] != '-1':
                 queryset = queryset.filter(
@@ -173,16 +173,17 @@ class StudentAPIView(APIView):
                 queryset = queryset.filter(
                     student_info__section__grade_id=params['grade_id']
                 )
-        
+
         if 'search_term' in params and len(params['search_term']) > 0:
             q = params['search_term']
             queryset = queryset.filter(
                 Q(student_info__gr_number__icontains=q) | Q(fullname__icontains=q),
             )
-        
+
         queryset = queryset.select_related('student_info__section__grade')
         return queryset
-    
+
+
 def download_students_csv(request):
     file_name = request.GET.get('file_name', None)
     response = HttpResponse(content_type='text/csv')
