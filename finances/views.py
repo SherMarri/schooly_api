@@ -34,11 +34,11 @@ class TransactionViewSet(CreateModelMixin, GenericViewSet):
         """
         return models.Transaction.objects.filter(
             transaction_type=self.transaction_type
-        ).select_related('category').order_by('-created_by')
+        ).select_related('category').order_by('-date')
 
     @action(detail=False)
     def today(self, request):
-        queryset = self.get_queryset().filter(created_at__date=date.today())
+        queryset = self.get_queryset().filter(date=date.today())
         serializer = self.get_serializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
@@ -119,7 +119,7 @@ class TransactionSummaryAPIView(APIView):
 
         # 1, 5
         yearly_aggregates = models.Transaction.objects.filter(
-            created_at__year=year,
+            date__year=year,
             transaction_type=self.transaction_type
         ).aggregate(
             total=Sum('amount'), average=Avg('amount')
@@ -131,9 +131,9 @@ class TransactionSummaryAPIView(APIView):
         category_aggregates = models.TransactionCategory.objects.filter(
             category_type=self.transaction_type
         ).annotate(
-            total_transactions=Count('transactions', filter=Q(transactions__created_at__year=year)),
-            yearly_amount=Sum('transactions__amount', filter=Q(transactions__created_at__year=year)),
-            monthly_amount=Sum('transactions__amount', filter=Q(transactions__created_at__month=month, transactions__created_at__year=year))
+            total_transactions=Count('transactions', filter=Q(transactions__date__year=year)),
+            yearly_amount=Sum('transactions__amount', filter=Q(transactions__date__year=year)),
+            monthly_amount=Sum('transactions__amount', filter=Q(transactions__date__month=month, transactions__date__year=year))
         ).filter(total_transactions__gt=0)
 
         results['category_wise_data'] = [{
@@ -146,13 +146,13 @@ class TransactionSummaryAPIView(APIView):
         # 7
         current_month_items = models.Transaction.objects.filter(
             transaction_type=self.transaction_type,
-            created_at__year=year, created_at__month=month
+            date__year=year, date__month=month
         )
 
         monthly_total = 0
         daily_total = {day: 0 for day in range(1, today.day + 1)}
         for item in current_month_items:
-            daily_total[item.created_at.day] += item.amount
+            daily_total[item.date.day] += item.amount
             monthly_total += item.amount
         results['monthly_total'] = monthly_total
         results['daily_total'] = daily_total
@@ -198,7 +198,7 @@ class TransactionDetailsAPIView(APIView):
             filter_serializer.validated_data['end_date'] + timedelta(days=1)
         )
         queryset = models.Transaction.objects.filter(
-            created_at__range=date_range
+            date__range=date_range
         ).select_related('category')
         if self.transaction_type:
             queryset = queryset.filter(transaction_type=self.transaction_type)
@@ -207,6 +207,8 @@ class TransactionDetailsAPIView(APIView):
                 filter_serializer.validated_data['category_id'] != -1:
             category_id = filter_serializer.validated_data['category_id']
             queryset = queryset.filter(category_id=category_id)
+
+        queryset = queryset.order_by('-date')
         if 'download' in params and params['download'] == 'true':
             return self.get_downloadable_link(queryset, self.transaction_type)
         elif 'page' not in params:  # Send category wise data as well
@@ -215,7 +217,7 @@ class TransactionDetailsAPIView(APIView):
             ).annotate(
                 total_amount=Sum(
                     'transactions__amount',
-                    filter=Q(transactions__created_at__range=date_range)
+                    filter=Q(transactions__date__range=date_range)
                 )
             ).filter(total_amount__gt=0)
             category_wise_data = [{
@@ -232,7 +234,7 @@ class TransactionDetailsAPIView(APIView):
             page = paginator.page(1)
             aggregate_queryset = models.TransactionCategory.objects.filter(
                 category_type=self.transaction_type,
-                transactions__created_at__range=date_range
+                transactions__date__range=date_range
             )
             if 'category_id' in filter_serializer.validated_data and \
                     filter_serializer.validated_data['category_id'] != -1:
@@ -266,7 +268,7 @@ class TransactionDetailsAPIView(APIView):
 
     @staticmethod
     def get_csv_row(income_record):
-        row = [income_record.title, income_record.category.name, income_record.amount, income_record.created_at.strftime('%Y-%m-%d')]
+        row = [income_record.title, income_record.category.name, income_record.amount, income_record.date.strftime('%Y-%m-%d')]
         return row
 
 
