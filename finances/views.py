@@ -133,9 +133,7 @@ class TransactionSummaryAPIView(APIView):
         ).annotate(
             total_transactions=Count('transactions', filter=Q(transactions__created_at__year=year)),
             yearly_amount=Sum('transactions__amount', filter=Q(transactions__created_at__year=year)),
-            monthly_amount=Sum('transactions__amount',
-                               filter=Q(transactions__created_at__month=month, transactions__created_at__year=year)
-                               )
+            monthly_amount=Sum('transactions__amount', filter=Q(transactions__created_at__month=month, transactions__created_at__year=year))
         ).filter(total_transactions__gt=0)
 
         results['category_wise_data'] = [{
@@ -250,9 +248,7 @@ class TransactionDetailsAPIView(APIView):
         results['data'] = serializer.data
         results['page'] = page.number
         results['count'] = paginator.count
-        return Response(status=status.HTTP_200_OK,
-                        data=results
-                        )
+        return Response(status=status.HTTP_200_OK, data=results)
 
     @staticmethod
     def get_downloadable_link(queryset, transaction_type):
@@ -335,13 +331,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
             page = paginator.page(1)
 
         serializer = serializers.FeeChallanSerializer(page, many=True)
-        return Response(status=status.HTTP_200_OK,
-                        data={
-                            'data': serializer.data,
-                            'page': page.number,
-                            'count': paginator.count,
-                        }
-                        )
+        return Response(status=status.HTTP_200_OK, data={'data': serializer.data, 'page': page.number, 'count': paginator.count, })
 
     @staticmethod
     def get_downloadable_link(queryset):
