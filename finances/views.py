@@ -340,7 +340,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow([
-                'Invoice #', 'Roll #', 'Name', 'Section', 'Fee', 'Paid', 'Discount', 'Due Date', 'Status',
+                'Invoice #', 'Roll #', 'Name', 'Section', 'Fee (Rs.)', 'Paid (Rs.)', 'Discount (Rs.)', 'Due Date', 'Status',
             ])
             for challan in queryset:
                 writer.writerow(ChallanViewSet.get_csv_row(challan))
@@ -361,9 +361,9 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
             challan.student.profile.student_info.gr_number,
             challan.student.profile.fullname,
             f'Class {challan.student.profile.student_info.section.grade.name} - {challan.student.profile.student_info.section.name}',
-            challan.total,
-            challan.paid,
-            challan.discount,
+            f'{challan.total:,}',
+            f'{challan.paid:,}',
+            f'{challan.discount:,}',
             challan.due_date,
             status,
         ]
