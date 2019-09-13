@@ -1,5 +1,5 @@
 from django.db import models
-
+from datetime import date
 from accounts.models import User
 from common.models import BaseModel
 
@@ -42,6 +42,7 @@ class Transaction(BaseModel):
     account_balance = models.FloatField()
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
         related_name='created_transactions')
+    date = models.DateField(default=date.today)
     
     TypeChoices = (
         (DEBIT, 'Debit'),

@@ -24,7 +24,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         model = models.Transaction
         fields = ('id', 'title', 'category_id', 'category', 'description',
                   'amount', 'account', 'transaction_type', 'account_balance',
-                  'created_by', 'created_at')
+                  'created_by', 'created_at', 'date')
         read_only_fields = ('account_balance', 'created_by', 'created_at')
 
     def create(self, validated_data):
