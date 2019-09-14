@@ -19,23 +19,29 @@ class JWTUserDetailsSerializer(serializers.Serializer):
 
 class StudentProfileSerializer(serializers.ModelSerializer):
 
-    roll_number = serializers.SerializerMethodField()
+    gr_number = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Profile
-        fields = ('id', 'fullname', 'roll_number', 'user_id')
+        fields = ('id', 'fullname', 'gr_number', 'user_id')
 
-    def get_roll_number(self, obj):
+    def get_gr_number(self, obj):
         try:
-            return obj.student_info.roll_number
+            return obj.student_info.gr_number
         except:
             return None
+
+class StudentSerializer(serializers.ModelSerializer):
+    profile = StudentProfileSerializer(read_only=True)
+    class Meta:
+        model = models.User
+        fields = ('id', 'profile')
 
 
 class CreateUpdateStudentSerializer(serializers.Serializer):
     user = serializers.IntegerField(required=False)
     fullname = serializers.CharField(max_length=128)
-    roll_number = serializers.CharField(max_length=20)
+    gr_number = serializers.CharField(max_length=20)
     date_of_birth = serializers.DateField()
     date_enrolled = serializers.DateField()
     address = serializers.CharField(max_length=128)
@@ -58,7 +64,7 @@ class CreateUpdateStudentSerializer(serializers.Serializer):
                 raise serializers.ValidationError("Invalid user id.")
         return value
 
-    def validate_roll_number(self, value):
+    def validate_gr_number(self, value):
         if not self.context['update'] and models.User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Roll number already assigned.")
         else:
@@ -85,13 +91,13 @@ class CreateUpdateStudentSerializer(serializers.Serializer):
 
     def create_user(self):
         validated_data = self.validated_data
-        user = models.User(username=validated_data['roll_number'])
-        user.set_password(validated_data['roll_number'])
+        user = models.User(username=validated_data['gr_number'])
+        user.set_password(validated_data['gr_number'])
         user.is_active = True
         user.save()
         # Create student info
         info = models.StudentInfo(
-            roll_number=validated_data['roll_number'],
+            gr_number=validated_data['gr_number'],
             section_id=validated_data['section_id'],
             date_enrolled=validated_data['date_enrolled'],
             date_of_birth=validated_data['date_of_birth'],
@@ -114,7 +120,7 @@ class CreateUpdateStudentSerializer(serializers.Serializer):
         profile = user.profile
         # update student info
         info = profile.student_info
-        info.roll_number = validated_data['roll_number']
+        info.gr_number = validated_data['gr_number']
         info.section_id = validated_data['section_id']
         info.date_enrolled = validated_data['date_enrolled']
         info.date_of_birth = validated_data['date_of_birth']
@@ -139,7 +145,7 @@ class StudentInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.StudentInfo
         fields = (
-            'roll_number', 'section', 'date_enrolled', 'date_of_birth',
+            'gr_number', 'section', 'date_enrolled', 'date_of_birth',
             'address', 'guardian_name', 'guardian_contact', 'gender',
         )
     

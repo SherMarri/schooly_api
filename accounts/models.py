@@ -46,7 +46,7 @@ class Profile(BaseModel):
 
 
 class StudentInfo(BaseModel):
-    roll_number = models.CharField(max_length=20, unique=True)
+    gr_number = models.CharField(max_length=20, unique=True)
     section = models.ForeignKey(Section, on_delete=models.SET_NULL, null=True,
                                 blank=True, related_name='students')
     date_enrolled = models.DateField(null=True, blank=True)
@@ -58,7 +58,7 @@ class StudentInfo(BaseModel):
     gender = models.IntegerField(choices=GenderTypes, default=MALE)
 
     def __str__(self):
-        return self.roll_number
+        return self.gr_number
 
 
 class StaffInfo(BaseModel):

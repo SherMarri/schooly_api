@@ -1,5 +1,5 @@
 from django.db import models
-
+from datetime import date
 from accounts.models import User
 from common.models import BaseModel
 
@@ -8,7 +8,7 @@ DEBIT = 1
 CREDIT = 2
 
 class Account(BaseModel):
-    name = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=128, unique=True)
     description = models.TextField(max_length=512, null=True, blank=True)
     balance = models.FloatField(default=0)
     is_default = models.NullBooleanField(null=True, blank=True)
@@ -21,7 +21,7 @@ class TransactionCategory(BaseModel):
         (CREDIT, 'Expense')
     )
 
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=128)
     description = models.TextField(max_length=512, null=True, blank=True)
     category_type = models.IntegerField(choices=TypeChoices)
 
@@ -34,7 +34,7 @@ class TransactionCategory(BaseModel):
 
 class Transaction(BaseModel):
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
-    title = models.CharField(max_length=20)
+    title = models.CharField(max_length=128)
     description = models.TextField(max_length=512, null=True, blank=True)
     category = models.ForeignKey(TransactionCategory, on_delete=models.CASCADE,
         related_name='transactions')
@@ -42,6 +42,7 @@ class Transaction(BaseModel):
     account_balance = models.FloatField()
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
         related_name='created_transactions')
+    date = models.DateField(default=date.today)
     
     TypeChoices = (
         (DEBIT, 'Debit'),
@@ -51,7 +52,7 @@ class Transaction(BaseModel):
     
 
 class FeeStructure(BaseModel):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=128)
     description = models.TextField(max_length=512, null=True, blank=True)
     break_down = models.TextField(max_length=2048)
     total = models.FloatField()
