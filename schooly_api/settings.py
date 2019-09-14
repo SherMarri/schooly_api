@@ -25,17 +25,7 @@ SECRET_KEY = '1m7+2)t&py&i77yv(4hg03cuivf4-565$t6zsb01h1ac6*a1)2'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    'localhost',
-    'http://localhost',
-    '167.71.51.236', 
-    'schooli.app',
-    'http://schooli.app', 
-    'https://schooli.app', 
-    'http://www.schooli.app', 
-    'https://www.schooli.app',
-]
-
+ALLOWED_HOSTS = os.environ['ALLOWED_HOSTS'].split(',')
 
 # Application definition
 
@@ -68,15 +58,7 @@ SITE_ID = 1
 REST_USE_JWT = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # No email verification required
 
-CORS_ORIGIN_WHITELIST = (
-    'http://localhost:3000', 
-    'http://localhost:3000',
-    'http://167.71.51.236', 
-    'http://schooli.app', 
-    'https://schooli.app', 
-    'http://www.schooli.app', 
-    'https://www.schooli.app',
-)
+CORS_ORIGIN_WHITELIST = os.environ['CORS_ORIGIN_WHITELIST'].split(',')
 
 REST_AUTH_SERIALIZERS = {
     'JWT_SERIALIZER': 'accounts.serializers.JWTUserDetailsSerializer'
@@ -135,9 +117,9 @@ WSGI_APPLICATION = 'schooly_api.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'schooli',
-        'USER': 'schooli',
-        'PASSWORD': 'jklahsduiq8333',
+        'NAME': os.environ['DB_NAME'],
+        'USER': os.environ['DB_USER'],
+        'PASSWORD': os.environ['DB_PASSWD'],
         'HOST': 'localhost',
         'PORT': '',
     }
