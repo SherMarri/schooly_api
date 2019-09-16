@@ -38,7 +38,7 @@ class TransactionViewSet(CreateModelMixin, GenericViewSet):
 
     @action(detail=False)
     def today(self, request):
-        queryset = self.get_queryset().filter(date=date.today())
+        queryset = self.get_queryset().filter(date=date.today()).order_by('-created_at')
         serializer = self.get_serializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
