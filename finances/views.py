@@ -322,7 +322,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         queryset = self.get_queryset().select_related(
             'student__profile__student_info__section__grade'
         )
-        queryset = self.apply_filters(queryset, params)
+        queryset = self.apply_filters(queryset, params).order_by('-created_at')
         if 'download' in params and params['download'] == 'true':
             return self.get_downloadable_link(queryset)
 
@@ -342,7 +342,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow([
-                'Invoice #', 'Roll #', 'Name', 'Section', 'Fee (Rs.)', 'Paid (Rs.)', 'Discount (Rs.)', 'Due Date', 'Status',
+                'Invoice #', 'GR #', 'Name', 'Section', 'Fee (Rs.)', 'Paid (Rs.)', 'Discount (Rs.)', 'Due Date', 'Status',
             ])
             for challan in queryset:
                 writer.writerow(ChallanViewSet.get_csv_row(challan))
@@ -413,8 +413,8 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
 
         if 'target_type' in params and 'target_value' in params:
             target_value = json.loads(params['target_value'])
-            if target_value['grade_id'] != '-1':  # If grade selected
-                if target_value['section_id'] != '-1':  # If section selected
+            if target_value['grade_id'] != -1:  # If grade selected
+                if target_value['section_id'] not in [-1, None]:  # If section selected
                     queryset = queryset.filter(
                         student__profile__student_info__section_id=target_value['section_id']
                     )
