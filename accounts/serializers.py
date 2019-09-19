@@ -154,6 +154,7 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
     fullname = serializers.CharField(max_length=128)
     date_hired = serializers.DateField()
     contact = serializers.CharField(max_length=128)
+    gender = serializers.IntegerField()
     address = serializers.CharField(max_length=128)
 
     def validate_user(self, value):
@@ -169,6 +170,11 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
                 raise serializers.ValidationError("Invalid user id.")
         return value
 
+    def validate_gender(self, value):
+        if value in [models.MALE, models.FEMALE]:
+            return value
+        else:
+            raise serializers.ValidationError('Invalid gender.')
 
     def save(self, **kwargs):
         if self.context['update']:
@@ -186,6 +192,7 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
         info = models.StaffInfo(
             date_hired=validated_data['date_hired'],
             address=validated_data['address'],
+            gender=validated_data['gender'],
         )
         info.save()
         # Create profile
@@ -200,13 +207,15 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
         validated_data = self.validated_data
         user = validated_data['user']
         profile = user.profile
-        # update student info
-        info = profile.student_info
+        # update staff info
+        info = profile.staff_info
         info.date_hired = validated_data['date_hired']
         info.address = validated_data['address']
+        info.gender = validated_data['gender']
         info.save()
         # update profile
         profile.fullname = validated_data['fullname']
+        profile.contact = validated_data['contact']
         profile.save()
 
 
@@ -248,7 +257,7 @@ class StaffInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.StaffInfo
         fields = (
-            'date_hired', 'salary', 'designation', 'address'
+            'date_hired', 'salary', 'designation', 'address', 'gender'
         )
 
 

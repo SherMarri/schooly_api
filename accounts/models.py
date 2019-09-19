@@ -67,3 +67,5 @@ class StaffInfo(BaseModel):
     salary = models.FloatField(default=0)
     designation = models.CharField(max_length=128)
     address = models.TextField(max_length=128, null=True, blank=True)
+    gender = models.IntegerField(choices=GenderTypes, default=MALE)
+
