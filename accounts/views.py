@@ -184,7 +184,132 @@ class StudentAPIView(APIView):
         return queryset
 
 
+class StaffAPIView(APIView):
+    permission_classes = (IsAdmin,)
+
+    def post(self, request):
+        data = request.data
+        context = {
+            'update': True if 'update' in data and data['update'] else False
+        }
+        serializer = serializers.CreateUpdateStaffSerializer(data=data, context=context)
+        if not serializer.is_valid():
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST, data=serializer.errors
+            )
+        else:
+            serializer.save()
+            return Response(status=status.HTTP_201_CREATED)
+
+    def get(self, request):
+        params = request.query_params
+        queryset = self.get_filtered_queryset(params)
+        if 'download' in params and params['download'] == 'true':
+            return self.get_downloadable_link(queryset)
+
+        results = {}
+        paginator = Paginator(queryset, 20)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+
+        serializer = serializers.StaffDetailsSerializer(page, many=True)
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return Response(status=status.HTTP_200_OK, data=results)
+
+    def delete(self, request):
+        """
+        Deactivates a student account
+        1. Deactivate user
+        2. Deactivate profile
+        3. Deactivate student info
+        """
+        params = request.query_params
+        id = params.get('id', None)
+        if id is None:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data='ID is required.'
+            )
+        try:
+            user = models.User.objects.get(id=id)
+        except:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data='Invalid ID.'
+            )
+
+        user.is_active = False
+        user.save()
+
+        profile = user.profile
+        profile.is_active = False
+        profile.save()
+
+        info = profile.staff_info
+        info.is_active = False
+        info.save()
+
+        return Response(status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_downloadable_link(queryset):
+        timestamp = datetime.datetime.now().strftime("%f")
+        file_name = f'staff_{timestamp}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([
+                'Full Name', 'Date Hired', 'Salary', 'Designation', 'Address'
+            ])
+            for profile in queryset:
+                writer.writerow(StaffAPIView.get_csv_row(profile))
+        return Response(file_name, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_csv_row(profile):
+        return [
+            profile.fullname,
+            profile.staff_info.date_hired,
+            profile.staff_info.salary,
+            profile.staff_info.designation,
+            profile.staff_info.address,
+        ]
+
+    @staticmethod
+    def get_filtered_queryset(params):
+        filter_serializer = serializers.StaffFilterSerializer(data=params)
+        if not filter_serializer.is_valid():
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data=filter_serializer.errors
+            )
+
+        queryset = models.Profile.objects.filter(
+            is_active=True, staff_info_id__isnull=False,
+        )
+
+        if 'search_term' in params and len(params['search_term']) > 0:
+            q = params['search_term']
+            queryset = queryset.filter(
+                Q(fullname__icontains=q),
+            )
+
+        return queryset
+
+
 def download_students_csv(request):
+    file_name = request.GET.get('file_name', None)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+    file = open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'))
+    response.content = file
+    return response
+
+
+def download_staff_csv(request):
     file_name = request.GET.get('file_name', None)
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="{file_name}"'

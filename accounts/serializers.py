@@ -31,6 +31,21 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         except:
             return None
 
+
+class StaffProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Profile
+        fields = ('id', 'fullname', 'user_id')
+
+
+class StaffSerializer(serializers.ModelSerializer):
+    profile = StaffProfileSerializer(read_only=True)
+
+    class Meta:
+        model = models.User
+        fields = ('id', 'profile')
+
+
 class StudentSerializer(serializers.ModelSerializer):
     profile = StudentProfileSerializer(read_only=True)
     class Meta:
@@ -133,9 +148,76 @@ class CreateUpdateStudentSerializer(serializers.Serializer):
         profile.fullname = validated_data['fullname']
         profile.save()
 
+
+class CreateUpdateStaffSerializer(serializers.Serializer):
+    user = serializers.IntegerField(required=False)
+    fullname = serializers.CharField(max_length=128)
+    date_hired = serializers.DateField()
+    contact = serializers.CharField(max_length=128)
+    address = serializers.CharField(max_length=128)
+
+    def validate_user(self, value):
+        if self.context['update'] and value is None:
+            raise serializers.ValidationError("User id is required while updating user.")
+        if value:
+            user = models.User.objects.filter(
+                id=value, is_active=True
+            ).select_related('profile__staff_info').first()
+            if user:
+                return user
+            else:
+                raise serializers.ValidationError("Invalid user id.")
+        return value
+
+
+    def save(self, **kwargs):
+        if self.context['update']:
+            self.update_user()
+        else:
+            self.create_user()
+
+    def create_user(self):
+        validated_data = self.validated_data
+        user = models.User(username=validated_data['fullname'].replace(' ', ''))
+        user.set_password(validated_data['fullname'].replace(' ', ''))
+        user.is_active = True
+        user.save()
+        # Create student info
+        info = models.StaffInfo(
+            date_hired=validated_data['date_hired'],
+            address=validated_data['address'],
+        )
+        info.save()
+        # Create profile
+        profile = models.Profile(
+            user_id=user.id, fullname=validated_data['fullname'],
+            contact=validated_data['contact'],
+            staff_info_id=info.id, profile_type=models.Profile.STAFF
+        )
+        profile.save()
+
+    def update_user(self):
+        validated_data = self.validated_data
+        user = validated_data['user']
+        profile = user.profile
+        # update student info
+        info = profile.student_info
+        info.date_hired = validated_data['date_hired']
+        info.address = validated_data['address']
+        info.save()
+        # update profile
+        profile.fullname = validated_data['fullname']
+        profile.save()
+
+
 class StudentFilterSerializer(serializers.Serializer):
     grade_id = serializers.IntegerField()
     section_id = serializers.IntegerField(required=False)
+    search_term = serializers.CharField(max_length=128, required=False)
+    page = serializers.IntegerField(allow_null=True, required=False)
+
+
+class StaffFilterSerializer(serializers.Serializer):
     search_term = serializers.CharField(max_length=128, required=False)
     page = serializers.IntegerField(allow_null=True, required=False)
 
@@ -162,6 +244,14 @@ class StudentInfoSerializer(serializers.ModelSerializer):
             return None
 
 
+class StaffInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.StaffInfo
+        fields = (
+            'date_hired', 'salary', 'designation', 'address'
+        )
+
+
 class StudentDetailsSerializer(serializers.ModelSerializer):
     student_info = StudentInfoSerializer(read_only=True)
     id = serializers.SerializerMethodField(read_only=True)
@@ -169,6 +259,19 @@ class StudentDetailsSerializer(serializers.ModelSerializer):
         model = models.Profile
         fields = (
             'id', 'fullname', 'student_info'
+        )
+
+    def get_id(self, obj):
+        return obj.user_id
+
+
+class StaffDetailsSerializer(serializers.ModelSerializer):
+    staff_info = StaffInfoSerializer(read_only=True)
+    id = serializers.SerializerMethodField(read_only=True)
+    class Meta:
+        model = models.Profile
+        fields = (
+            'id', 'fullname', 'contact', 'staff_info'
         )
 
     def get_id(self, obj):
