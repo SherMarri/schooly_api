@@ -18,7 +18,7 @@ settings = LazySettings()
 class CustomLoginView(LoginView):
     def get_response(self):
         serializer_class = self.get_response_serializer()
-  
+
         if getattr(settings, 'REST_USE_JWT', False):
             data = {
                 'user': self.user,
@@ -55,7 +55,7 @@ class StudentsAutocompleteAPIView(APIView):
 
 class StudentAPIView(APIView):
     permission_classes = (IsAdmin,)
-    
+
     def post(self, request):
         data = request.data
         context = {
@@ -75,14 +75,14 @@ class StudentAPIView(APIView):
         queryset = self.get_filtered_queryset(params)
         if 'download' in params and params['download'] == 'true':
             return self.get_downloadable_link(queryset)
-        
+
         results = {}
         paginator = Paginator(queryset, 20)
         if 'page' in params:
             page = paginator.page(int(params['page']))
         else:
             page = paginator.page(1)
-        
+
         serializer = serializers.StudentDetailsSerializer(page, many=True)
         results['data'] = serializer.data
         results['page'] = page.number
@@ -110,7 +110,7 @@ class StudentAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
                 data='Invalid ID.'
             )
-        
+
         user.is_active = False
         user.save()
 
@@ -121,8 +121,8 @@ class StudentAPIView(APIView):
         info = profile.student_info
         info.is_active = False
         info.save()
-        
-        return Response(status=status.HTTP_200_OK)    
+
+        return Response(status=status.HTTP_200_OK)
 
     @staticmethod
     def get_downloadable_link(queryset):
@@ -262,7 +262,7 @@ class StaffAPIView(APIView):
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow([
-                'Full Name', 'Date Hired', 'Salary', 'Designation', 'Address'
+                'Full Name', 'Date Hired', 'Designation', 'Contact', 'Address'
             ])
             for profile in queryset:
                 writer.writerow(StaffAPIView.get_csv_row(profile))
@@ -272,9 +272,9 @@ class StaffAPIView(APIView):
     def get_csv_row(profile):
         return [
             profile.fullname,
-            profile.staff_info.date_hired,
-            profile.staff_info.salary,
+            profile.staff_info.date_hired.strftime('%d-%m-%Y'),
             profile.staff_info.designation,
+            profile.contact,
             profile.staff_info.address,
         ]
 
