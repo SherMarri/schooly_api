@@ -7,3 +7,4 @@ class SubjectViewSet(ModelViewSet):
     queryset = models.Subject.objects.all()
     serializer_class = serializers.SubjectSerializer
     permission_classes = (permissions.IsAdmin,)
+
