@@ -172,6 +172,7 @@ class FeeChallanSerializer(serializers.ModelSerializer):
     def get_student(self, obj):
         return {
             'id': obj.student.id,
+            'gr_number': obj.student.profile.student_info.gr_number,
             'fullname': obj.student.profile.fullname,
             'grade': obj.student.profile.student_info.section.grade.name,
             'section': obj.student.profile.student_info.section.name,
