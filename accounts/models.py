@@ -63,7 +63,7 @@ class StudentInfo(BaseModel):
 
 
 class StaffInfo(BaseModel):
-    date_hired = models.DateField(default=timezone.now())
+    date_hired = models.DateField(default=timezone.now)
     salary = models.FloatField(default=0)
     designation = models.CharField(max_length=128)
     address = models.TextField(max_length=128, null=True, blank=True)
