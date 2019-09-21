@@ -335,6 +335,15 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         serializer = serializers.FeeChallanSerializer(page, many=True)
         return Response(status=status.HTTP_200_OK, data={'data': serializer.data, 'page': page.number, 'count': paginator.count, })
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.paid + instance.discount > 0:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
     @staticmethod
     def get_downloadable_link(queryset):
         timestamp = datetime.now().strftime("%f")
