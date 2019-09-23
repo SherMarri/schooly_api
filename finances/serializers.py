@@ -174,6 +174,7 @@ class FeeChallanSerializer(serializers.ModelSerializer):
             'id': obj.student.id,
             'gr_number': obj.student.profile.student_info.gr_number,
             'fullname': obj.student.profile.fullname,
+            'guardian_name': obj.student.profile.student_info.guardian_name,
             'grade': obj.student.profile.student_info.section.grade.name,
             'section': obj.student.profile.student_info.section.name,
         }
