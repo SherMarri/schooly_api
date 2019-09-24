@@ -288,16 +288,29 @@ class ExpenseCategoryViewSet(ModelViewSet):
     permission_classes = (IsAdmin,)
     serializer_class = serializers.TransactionCategorySerializer
     queryset = models.TransactionCategory.objects.filter(
-        category_type=models.CREDIT
+        category_type=models.CREDIT, is_active=True
     )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class IncomeCategoryViewSet(ModelViewSet):
     permission_classes = (IsAdmin,)
     serializer_class = serializers.TransactionCategorySerializer
     queryset = models.TransactionCategory.objects.filter(
-        category_type=models.DEBIT
+        category_type=models.DEBIT, is_active=True
     )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 
 class FeeStructureViewSet(ModelViewSet):
