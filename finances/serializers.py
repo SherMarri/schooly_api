@@ -7,6 +7,7 @@ from finances import models
 from structure.models import Grade
 import json
 
+
 class TransactionCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TransactionCategory
@@ -178,6 +179,7 @@ class FeeChallanSerializer(serializers.ModelSerializer):
             'grade': obj.student.profile.student_info.section.grade.name,
             'section': obj.student.profile.student_info.section.name,
         }
+
 
 class FeeChallanPaymentSerializer(serializers.Serializer):
     paid = serializers.FloatField()
