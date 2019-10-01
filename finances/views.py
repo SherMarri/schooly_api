@@ -391,7 +391,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
             challan.id,
             challan.student.profile.student_info.gr_number,
             challan.student.profile.fullname,
-            f'Class {challan.student.profile.student_info.section.grade.name} - {challan.student.profile.student_info.section.name}',
+            f'{challan.student.profile.student_info.section.grade.name} - {challan.student.profile.student_info.section.name}',
             f'{challan.total:,}',
             f'{challan.paid:,}',
             f'{challan.discount:,}',
