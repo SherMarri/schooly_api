@@ -6,6 +6,8 @@ from academics import views
 
 router = DefaultRouter()
 router.register('subjects', views.SubjectViewSet, basename='subjects')
+router.register('grades', views.GradeViewSet, basename='structure-grades')
+
 
 
 urlpatterns = [
