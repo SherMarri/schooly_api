@@ -38,7 +38,7 @@ class TransactionViewSet(CreateModelMixin, GenericViewSet):
 
     @action(detail=False)
     def today(self, request):
-        queryset = self.get_queryset().filter(date=date.today())
+        queryset = self.get_queryset().filter(date=date.today()).order_by('-created_at')
         serializer = self.get_serializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
@@ -288,16 +288,29 @@ class ExpenseCategoryViewSet(ModelViewSet):
     permission_classes = (IsAdmin,)
     serializer_class = serializers.TransactionCategorySerializer
     queryset = models.TransactionCategory.objects.filter(
-        category_type=models.CREDIT
+        category_type=models.CREDIT, is_active=True
     )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class IncomeCategoryViewSet(ModelViewSet):
     permission_classes = (IsAdmin,)
     serializer_class = serializers.TransactionCategorySerializer
     queryset = models.TransactionCategory.objects.filter(
-        category_type=models.DEBIT
+        category_type=models.DEBIT, is_active=True
     )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 
 class FeeStructureViewSet(ModelViewSet):
@@ -322,7 +335,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         queryset = self.get_queryset().select_related(
             'student__profile__student_info__section__grade'
         )
-        queryset = self.apply_filters(queryset, params)
+        queryset = self.apply_filters(queryset, params).order_by('-created_at')
         if 'download' in params and params['download'] == 'true':
             return self.get_downloadable_link(queryset)
 
@@ -335,6 +348,15 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         serializer = serializers.FeeChallanSerializer(page, many=True)
         return Response(status=status.HTTP_200_OK, data={'data': serializer.data, 'page': page.number, 'count': paginator.count, })
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.paid + instance.discount > 0:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
     @staticmethod
     def get_downloadable_link(queryset):
         timestamp = datetime.now().strftime("%f")
@@ -342,7 +364,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow([
-                'Invoice #', 'Roll #', 'Name', 'Section', 'Fee (Rs.)', 'Paid (Rs.)', 'Discount (Rs.)', 'Due Date', 'Status',
+                'Invoice #', 'GR #', 'Name', 'Section', 'Fee (Rs.)', 'Paid (Rs.)', 'Discount (Rs.)', 'Due Date', 'Status',
             ])
             for challan in queryset:
                 writer.writerow(ChallanViewSet.get_csv_row(challan))
@@ -378,7 +400,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         challan.paid = challan.paid + data['paid']
-        challan.discount = challan.discount
+        challan.discount = serializer.validated_data['discount']
         challan.paid_at = datetime.now()
         challan.save()
         self.add_to_transactions(challan, data['paid'])
@@ -413,8 +435,8 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
 
         if 'target_type' in params and 'target_value' in params:
             target_value = json.loads(params['target_value'])
-            if target_value['grade_id'] != '-1':  # If grade selected
-                if target_value['section_id'] != '-1':  # If section selected
+            if target_value['grade_id'] != -1:  # If grade selected
+                if target_value['section_id'] not in [-1, None]:  # If section selected
                     queryset = queryset.filter(
                         student__profile__student_info__section_id=target_value['section_id']
                     )

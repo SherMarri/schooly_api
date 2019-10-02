@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.utils import timezone
 
 from common.models import BaseModel
 from structure.models import Section
@@ -62,6 +63,9 @@ class StudentInfo(BaseModel):
 
 
 class StaffInfo(BaseModel):
-    date_hired = models.DateField(auto_now_add=True)
+    date_hired = models.DateField(default=timezone.now)
     salary = models.FloatField(default=0)
     designation = models.CharField(max_length=128)
+    address = models.TextField(max_length=128, null=True, blank=True)
+    gender = models.IntegerField(choices=GenderTypes, default=MALE)
+

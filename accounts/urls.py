@@ -14,8 +14,16 @@ urlpatterns = [
         view=views.download_students_csv,
         name='students-download-csv'
     ),
+    url(r'^staff/downloadcsv',
+        view=views.download_staff_csv,
+        name='staff-download-csv'
+    ),
     path('students/',
         view=views.StudentAPIView.as_view(),
         name='students'
+    ),
+    path('staff/',
+        view=views.StaffAPIView.as_view(),
+        name='staff'
     ),
 ]
