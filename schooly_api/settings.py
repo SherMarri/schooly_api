@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'structure',
     'finances',
     'attendance',
+    'notifications',
 ]
 
 APPEND_SLASH = True

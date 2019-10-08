@@ -16,6 +16,7 @@ GenderTypes = (
     (FEMALE, 'Female'),
 )
 
+
 class Profile(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
 
