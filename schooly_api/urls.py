@@ -22,5 +22,6 @@ urlpatterns = [
     url('api/v1/users/', include('accounts.urls')),
     url('api/v1/finance/', include('finances.urls')),
     url('api/v1/academics/', include('academics.urls')),
+    url('api/v1/attendance/', include('attendance.urls')),
     url('api/v1/notifications/', include('notifications.urls')),
 ]

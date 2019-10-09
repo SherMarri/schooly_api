@@ -90,7 +90,7 @@ class GradeViewSet(ModelViewSet):
             for section in g.sections:
                 grade['students'] += section.students.count()
 
-            # TODO
+        # TODO
 
 
 class SubjectViewSet(ModelViewSet):
