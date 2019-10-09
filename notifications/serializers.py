@@ -7,7 +7,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Notification
-        fields = ('id', 'title', 'creator', 'content', 'created_by',
+        fields = ('id', 'title', 'creator', 'content', 'created_by', 'created_at',
                   'target_type', 'target_id')
         read_only_fields = ('creator',)
 
