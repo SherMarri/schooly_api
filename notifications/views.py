@@ -46,8 +46,8 @@ class NotificationViewSet(ModelViewSet):
     def get_filtered_queryset(params):
         queryset = models.Notification.objects.filter(is_active=True)
         if 'target_type' in params:
-            queryset = queryset.filter(target_type=1)
+            queryset = queryset.filter(target_type=params['target_type'])
         if 'target_id' in params:
-            queryset = queryset.filter(target_id=1)
+            queryset = queryset.filter(target_id=params['target_id'])
         return queryset
 
