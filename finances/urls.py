@@ -35,9 +35,9 @@ urlpatterns = [
         view=views.download_expense_report_csv,
         name='income-report-download-csv'
     ),
-    path('fees/', include(fees_router.urls)),
     url(r'^fees/challans/download_csv',
         view=views.download_challans_csv,
         name='challans-download-csv'
-    )
+    ),
+    path('fees/', include(fees_router.urls)),
 ]

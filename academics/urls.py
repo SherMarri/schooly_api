@@ -5,7 +5,9 @@ from rest_framework.routers import DefaultRouter
 from academics import views
 
 router = DefaultRouter()
-router.register('subjects', views.SubjectViewSet, basename='subjects')
+router.register('subjects', views.SubjectViewSet, basename='academics-subjects')
+router.register('grades', views.GradeViewSet, basename='academics-grades')
+router.register('sections', views.SectionViewSet, basename='academics-sections')
 
 
 urlpatterns = [

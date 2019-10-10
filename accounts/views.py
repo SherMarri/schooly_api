@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts import models, serializers
-from common.permissions import IsAdmin
+from common.permissions import IsAdmin, IsHR, IsAccountant
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 import os
@@ -54,7 +54,7 @@ class StudentsAutocompleteAPIView(APIView):
 
 
 class StudentAPIView(APIView):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin]
 
     def post(self, request):
         data = request.data
@@ -185,7 +185,13 @@ class StudentAPIView(APIView):
 
 
 class StaffAPIView(APIView):
-    permission_classes = (IsAdmin,)
+
+    def get_permissions(self):
+        if self.request.method in ['GET']:
+            permission_classes = [IsAdmin | IsHR | IsAccountant]
+        else:
+            permission_classes = [IsAdmin]
+        return [permission_class() for permission_class in permission_classes]
 
     def post(self, request):
         data = request.data

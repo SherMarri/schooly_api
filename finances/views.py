@@ -6,7 +6,7 @@ from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from django.db.models import F, Q, Avg, Sum, Max, Min, Count
-from common.permissions import IsAdmin
+from common.permissions import IsAdmin, IsAccountant
 from finances import serializers, models
 from django.core.paginator import Paginator
 import json
@@ -20,12 +20,20 @@ settings = LazySettings()
 
 
 class TransactionViewSet(CreateModelMixin, GenericViewSet):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin | IsAccountant]
     serializer_class = serializers.TransactionSerializer
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.transaction_type = kwargs.get('transaction_type', None)
+
+    # def get_permissions(self):
+    #     if self.action in ['create']:
+    #         permission_classes = [IsAdmin | IsAccountant]
+    #     else:
+    #         permission_classes = [IsAdmin]
+    #     return [permission_class() for permission_class in permission_classes]
+
 
     def get_queryset(self):
         """
@@ -94,7 +102,7 @@ class IncomeItemViewSet(TransactionViewSet):
 
 
 class TransactionSummaryAPIView(APIView):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -172,7 +180,7 @@ class IncomeSummaryAPIView(TransactionSummaryAPIView):
 
 
 class TransactionDetailsAPIView(APIView):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -285,7 +293,7 @@ class IncomeDetailsAPIView(TransactionDetailsAPIView):
 
 
 class ExpenseCategoryViewSet(ModelViewSet):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin | IsAccountant]
     serializer_class = serializers.TransactionCategorySerializer
     queryset = models.TransactionCategory.objects.filter(
         category_type=models.CREDIT, is_active=True
@@ -299,7 +307,7 @@ class ExpenseCategoryViewSet(ModelViewSet):
 
 
 class IncomeCategoryViewSet(ModelViewSet):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin | IsAccountant]
     serializer_class = serializers.TransactionCategorySerializer
     queryset = models.TransactionCategory.objects.filter(
         category_type=models.DEBIT, is_active=True
@@ -312,15 +320,14 @@ class IncomeCategoryViewSet(ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
 class FeeStructureViewSet(ModelViewSet):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin | IsAccountant]
     serializer_class = serializers.FeeStructureSerializer
     queryset = models.FeeStructure.objects.all()
 
 
 class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin | IsAccountant]
     queryset = models.FeeChallan.objects.filter(is_active=True)
 
     def create(self, request, *args, **kwargs):
@@ -384,7 +391,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
             challan.id,
             challan.student.profile.student_info.gr_number,
             challan.student.profile.fullname,
-            f'Class {challan.student.profile.student_info.section.grade.name} - {challan.student.profile.student_info.section.name}',
+            f'{challan.student.profile.student_info.section.grade.name} - {challan.student.profile.student_info.section.name}',
             f'{challan.total:,}',
             f'{challan.paid:,}',
             f'{challan.discount:,}',
