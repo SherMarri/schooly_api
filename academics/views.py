@@ -27,7 +27,10 @@ class GradeViewSet(ModelViewSet):
         Lists the grades in the system
         If summary flag is true, return grades with their summaries
         """
-        return super().list(request, args, kwargs)
+        if 'summary' in request.query_params and \
+            request.user.groups.filter(name='Admin').count() > 0:
+            return self.list_grades_summary()
+        return super().list(self, request, args, kwargs)
 
     @action(detail=True, methods=['get'])
     def notifications(self, request, pk=None):
@@ -78,6 +81,50 @@ class SectionViewSet(ModelViewSet):
         results['page'] = page.number
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
+
+    def list_grades_summary(self):
+        """
+        Method for returning following information in response:
+        1. Total students
+        2. Total subjects
+        3. Total teachers
+        4. Total attendance (current session)
+        5. Month-wise attendance stats for graph
+        6. Classes table with following info:
+            i. Name
+            ii. Strength
+            iii. Subjects
+            iv: Teachers
+            v: Attendance
+        """
+        grade_set = Grade.objects.filter(
+            is_active=True
+        ).prefetch_related(
+            'sections__students', 'sections__subjects__subject',
+        ).filter(
+            sections__is_active=True, sections__students__is_active=True
+        )
+
+        total_students = 0
+        total_subjects = 0
+        total_teachers = 0
+        total_attendance = 0
+        session_attendance = []
+
+        grades = {}
+        for g in grade_set:
+            grade = {
+                'id': g.id,
+                'name': g.name,
+                'students': 0,
+                'sections': g.sections.count(),
+                'teachers': 0,
+                'attendance': 0
+            }
+            for section in g.sections:
+                grade['students'] += section.students.count()
+
+            # TODO
 
 
 class SubjectViewSet(ModelViewSet):
