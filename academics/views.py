@@ -7,7 +7,7 @@ from rest_framework.viewsets import ModelViewSet
 from academics import models, serializers, permissions
 from common.permissions import IsAdmin, IsTeacher
 from notifications.serializers import NotificationSerializer
-from structure.models import Grade
+from structure.models import Grade, Section
 from notifications.views import NotificationViewSet
 
 
@@ -31,22 +31,6 @@ class GradeViewSet(ModelViewSet):
             request.user.groups.filter(name='Admin').count() > 0:
             return self.list_grades_summary()
         return super().list(self, request, args, kwargs)
-
-    @action(detail=True, methods=['get'])
-    def notifications(self, request, pk=None):
-        params = request.query_params
-        queryset = NotificationViewSet.get_filtered_queryset(params)
-        paginator = Paginator(queryset, 10)
-        if 'page' in params:
-            page = paginator.page(int(params['page']))
-        else:
-            page = paginator.page(1)
-        serializer = NotificationSerializer(page, many=True)
-        results = {}
-        results['data'] = serializer.data
-        results['page'] = page.number
-        results['count'] = paginator.count
-        return Response(status=status.HTTP_200_OK, data=results)
 
     def list_grades_summary(self):
         """
@@ -91,6 +75,56 @@ class GradeViewSet(ModelViewSet):
                 grade['students'] += section.students.count()
 
         # TODO
+
+    @action(detail=True, methods=['get'])
+    def notifications(self, request, pk=None):
+        params = request.query_params
+        queryset = NotificationViewSet.get_filtered_queryset(params)
+        paginator = Paginator(queryset.order_by('-created_at'), 10)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        serializer = NotificationSerializer(page, many=True)
+        results = {}
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return Response(status=status.HTTP_200_OK, data=results)
+
+
+class SectionViewSet(ModelViewSet):
+    queryset = Section.objects.filter(is_active=True)
+    permission_classes = (IsAdmin,)
+    serializer_class = serializers.GradeSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def list(self, request, *args, **kwargs):
+        """
+        Lists the sections in the system
+        """
+        return super().list(request, args, kwargs)
+
+    @action(detail=True, methods=['get'])
+    def notifications(self, request, pk=None):
+        params = request.query_params
+        queryset = NotificationViewSet.get_filtered_queryset(params)
+        paginator = Paginator(queryset.order_by('-created_at'), 10)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        serializer = NotificationSerializer(page, many=True)
+        results = {}
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return Response(status=status.HTTP_200_OK, data=results)
 
 
 class SubjectViewSet(ModelViewSet):
