@@ -5,8 +5,8 @@ from rest_framework.routers import DefaultRouter
 from attendance import views
 
 router = DefaultRouter()
-router.register('daily', views.DailyStudentAttendanceViewSet, basename='student-attendances-daily')
+router.register('daily', views.DailyStudentAttendanceViewSet, basename='students-attendance-daily')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('students/', include(router.urls)),
 ]

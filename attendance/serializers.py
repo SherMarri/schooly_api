@@ -3,6 +3,7 @@ from attendance import models
 from accounts.serializers import StudentSerializer
 from academics.serializers import SectionSerializer
 
+
 class DailyStudentAttendanceSerializer(serializers.ModelSerializer):
     creator = serializers.SerializerMethodField(read_only=True)
     section = SectionSerializer(read_only=True)
@@ -12,9 +13,9 @@ class DailyStudentAttendanceSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = models.DailyStudentAttendance
-        fields = ('id', 'date', 'section', 'section_id', 'created_by',
-                  'target_type', 'target_id')
-        read_only_fields = ('creator', 'section')
+        fields = ('id', 'date', 'section', 'section_id', 'session',
+            'created_by', 'creator', 'average_attendance',)
+        read_only_fields = ('creator', 'section', 'average_attendance',)
 
     def get_creator(self, instance):
         if not instance.created_by:
@@ -48,3 +49,41 @@ class DailyStudentAttendanceSerializer(serializers.ModelSerializer):
             )
             items.append(item)
         models.StudentAttendanceItem.objects.bulk_create(items)
+        return instance
+
+
+class StudentAttendanceItemSerializer(serializers.ModelSerializer):
+    student = StudentSerializer(read_only=True)
+    class Meta:
+        model = models.StudentAttendanceItem
+        fields = ('__all__')
+
+
+class DailyStudentAttendanceDetailsSerializer(serializers.ModelSerializer):
+    """
+    Read only serializer for representing daily student attendance and its items
+    """
+    creator = serializers.SerializerMethodField()
+    section = SectionSerializer(read_only=True)
+    items = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.DailyStudentAttendance
+        fields = ('id', 'date', 'section', 'section_id', 'session',
+            'created_by', 'items', 'creator', 'average_attendance',)
+        read_only_fields = ('creator', 'items', 'section', 'average_attendance',)
+
+    def get_creator(self, instance):
+        if not instance.created_by:
+            return None
+        return {
+            'id': instance.created_by.id,
+            'fullname': instance.created_by.profile.fullname,
+        }
+
+    def get_items(self, instance):
+        queryset = models.StudentAttendanceItem.objects.filter(
+            attendance=instance, is_active=True
+        ).select_related('student__profile__student_info')
+        serializer = StudentAttendanceItemSerializer(queryset, many=True)
+        return serializer.data
