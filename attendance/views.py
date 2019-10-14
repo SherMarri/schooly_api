@@ -22,7 +22,7 @@ class DailyStudentAttendanceViewSet(
     def list(self, request, *args, **kwargs):
         params = request.query_params
         queryset = self.get_filtered_queryset(**params)
-        paginator = Paginator(queryset, 20)
+        paginator = Paginator(queryset, 30)
         if 'page' in params:
             page = paginator.page(int(params['page']))
         else:
@@ -35,6 +35,12 @@ class DailyStudentAttendanceViewSet(
 
     def create(self, request, *args, **kwargs):
         data = request.data
+        current_session = models.Session.objects.filter(is_active=True).first()
+        if not current_session:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={
+                'message': 'No active session found',
+            })
+        data['session'] = current_session.id
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -67,11 +73,25 @@ class DailyStudentAttendanceViewSet(
             models.StudentAttendanceItem.objects.bulk_update(
                 items, ['status', 'comments']
             )
-        return self.retrieve(request, *args, **kwargs)
+            instance.average_attendance = self.get_average_attendance(items)
+            instance.save()
+        return Response(status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_average_attendance(items):
+        total = 0.0
+        present = 0.0
+        for item in items:
+            if item.status is None:
+                continue
+            total += 1
+            if item.status == models.StudentAttendanceItem.PRESENT:
+                present += 1
+        return present/total * 100.0 if present > 0 else None
 
     @staticmethod
     def get_filtered_queryset(**kwargs):
         queryset = models.DailyStudentAttendance.objects.filter(is_active=True)
         if 'section_id' in kwargs:
             queryset = queryset.filter(section_id=kwargs['section_id'])
-        return queryset
+        return queryset.order_by('-date')

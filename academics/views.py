@@ -134,7 +134,7 @@ class SectionViewSet(ModelViewSet):
         queryset = DailyStudentAttendanceViewSet.get_filtered_queryset(
             section_id=instance.id
         )
-        paginator = Paginator(queryset.order_by('-created_at'), 10)
+        paginator = Paginator(queryset, 30)
         if 'page' in params:
             page = paginator.page(int(params['page']))
         else:
