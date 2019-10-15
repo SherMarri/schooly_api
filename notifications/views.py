@@ -1,4 +1,5 @@
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -49,5 +50,12 @@ class NotificationViewSet(ModelViewSet):
             queryset = queryset.filter(target_type=params['target_type'])
         if 'target_id' in params:
             queryset = queryset.filter(target_id=params['target_id'])
+        if 'search_term' in params:
+            queryset = queryset.filter(
+                Q(title__icontains=params['search_term']) | Q(content__icontains=params['search_term']))
+        if 'start_date' in params:
+            queryset = queryset.filter(created_at__gte=params['start_date'])
+        if 'end_date' in params:
+            end_date = "%s %s" % (params['end_date'], '23:59:59.000')
+            queryset = queryset.filter(created_at__lte=end_date)
         return queryset
-
