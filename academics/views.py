@@ -9,7 +9,8 @@ from common.permissions import IsAdmin, IsTeacher
 from notifications.serializers import NotificationSerializer
 from structure.models import Grade, Section
 from notifications.views import NotificationViewSet
-
+from attendance.views import DailyStudentAttendanceViewSet
+from attendance.serializers import DailyStudentAttendanceSerializer
 
 class GradeViewSet(ModelViewSet):
     queryset = Grade.objects.filter(is_active=True).prefetch_related('sections')
@@ -24,7 +25,7 @@ class GradeViewSet(ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """
-        Lists the grades in the system
+        Lists the grades in the system.
         If summary flag is true, return grades with their summaries
         """
         if 'summary' in request.query_params and \
@@ -74,7 +75,7 @@ class GradeViewSet(ModelViewSet):
             for section in g.sections:
                 grade['students'] += section.students.count()
 
-            # TODO
+        # TODO
 
     @action(detail=True, methods=['get'])
     def notifications(self, request, pk=None):
@@ -120,6 +121,25 @@ class SectionViewSet(ModelViewSet):
         else:
             page = paginator.page(1)
         serializer = NotificationSerializer(page, many=True)
+        results = {}
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return Response(status=status.HTTP_200_OK, data=results)
+
+    @action(detail=True, methods=['get'])
+    def attendance(self, request, pk=None):
+        instance = self.get_object()
+        params = request.query_params
+        queryset = DailyStudentAttendanceViewSet.get_filtered_queryset(
+            section_id=instance.id
+        )
+        paginator = Paginator(queryset, 30)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        serializer = DailyStudentAttendanceSerializer(page, many=True)
         results = {}
         results['data'] = serializer.data
         results['page'] = page.number
