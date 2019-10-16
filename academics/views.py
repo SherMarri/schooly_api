@@ -146,6 +146,25 @@ class SectionViewSet(ModelViewSet):
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
 
+    @action(detail=True, methods=['get', 'post'])
+    def subjects(self, request, pk=None):
+        if request.method === 'POST':
+            return self.handle_subject_assignment()
+        instance = self.get_object()
+        queryset = models.SectionSubject.objects.filter(
+            section_id=instance.id, is_active=True,
+        )
+        serializer = serializers.SectionSubjectSerializer(queryset, many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
+
+    def handle_subject_assignment(self):
+        instance = self.get_object()
+        data = self.request.data
+        serializer = serializers.SectionSubjectSerializer(data=data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(status=status.HTTP_201_CREATED, data=serializer.data)
+
 
 class SubjectViewSet(ModelViewSet):
     queryset = models.Subject.objects.filter(is_active=True)
