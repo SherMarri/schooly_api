@@ -152,6 +152,10 @@ class SectionViewSet(ModelViewSet):
             return self.add_subject()
         elif request.method == 'PUT':
             return self.update_subject_assignment()
+        else:
+            return self.get_subjects()
+
+    def get_subjects(self):
         instance = self.get_object()
         queryset = models.SectionSubject.objects.filter(
             section_id=instance.id, is_active=True,
@@ -178,10 +182,19 @@ class SectionViewSet(ModelViewSet):
             return Response(status=status.HTTP_400_BAD_REQUEST, data={
                 'message': 'No section subject id provided'
             })
+        instance = self.get_object()      
         serializer = serializers.SectionSubjectSerializer(
             instance=section_subject, data=data, partial=True
         )
         if serializer.is_valid(raise_exception=True):
+            section = serializer.validated_data['section']
+            if section.id != instance.id:
+                return Response(
+                    status=status.HTTP_200_OK,
+                    data={
+                        'message': 'Cannot assign subject to another section using current API Endpoint'
+                    }
+                )
             serializer.save()
             return Response(status=status.HTTP_200_OK, data=serializer.data)
             
