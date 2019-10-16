@@ -90,8 +90,12 @@ class DailyStudentAttendanceViewSet(
         return present/total * 100.0 if present > 0 else None
 
     @staticmethod
-    def get_filtered_queryset(**kwargs):
+    def get_filtered_queryset(params):
         queryset = models.DailyStudentAttendance.objects.filter(is_active=True)
-        if 'section_id' in kwargs:
-            queryset = queryset.filter(section_id=kwargs['section_id'])
+        if 'section_id' in params:
+            queryset = queryset.filter(section_id=params['section_id'])
+        if 'start_date' in params:
+            queryset = queryset.filter(date__gte=params['start_date'])
+        if 'end_date' in params:
+            queryset = queryset.filter(date__lte=params['end_date'])
         return queryset.order_by('-date')
