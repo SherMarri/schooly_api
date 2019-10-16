@@ -132,7 +132,7 @@ class SectionViewSet(ModelViewSet):
         instance = self.get_object()
         params = request.query_params
         queryset = DailyStudentAttendanceViewSet.get_filtered_queryset(
-            section_id=instance.id
+            params
         )
         paginator = Paginator(queryset, 30)
         if 'page' in params:
