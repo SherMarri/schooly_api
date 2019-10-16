@@ -31,7 +31,8 @@ class NotificationViewSet(ModelViewSet):
         return Response(status=status.HTTP_200_OK, data=results)
 
     def create(self, request, *args, **kwargs):
-        data = request.data
+        data = request.data.copy()
+        data['created_by'] = request.user.id
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
