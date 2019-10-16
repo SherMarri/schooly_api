@@ -21,6 +21,9 @@ class SectionSubject(BaseModel):
                                 null=True, blank=True,
                                 related_name='subjects')
 
+    class Meta:
+        unique_together = ['subject', 'section',]
+
     def __str__(self):
         return '{0} (Section {1} - Class {2}'.format(
             self.subject.name, self.section.name, self.section.grade.name)
