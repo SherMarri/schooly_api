@@ -25,7 +25,7 @@ class GradeSerializer(serializers.ModelSerializer):
 
 class SectionSubjectSerializer(serializers.ModelSerializer):
     subject = SubjectSerializer(read_only=True)
-    section_id = serializers.PrimaryKeyRelatedField(
+    subject_id = serializers.PrimaryKeyRelatedField(
         write_only=True, queryset=models.Subject.objects.filter(is_active=True),
         source='subject'
     )
@@ -37,7 +37,8 @@ class SectionSubjectSerializer(serializers.ModelSerializer):
     teacher = serializers.SerializerMethodField()
     teacher_id = serializers.PrimaryKeyRelatedField(
         write_only=True, queryset=models.User.objects.filter(is_active=True),
-        source='teacher'
+        source='teacher',
+        required=False,
     )
 
     class Meta:

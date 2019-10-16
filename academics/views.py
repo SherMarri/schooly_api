@@ -146,10 +146,12 @@ class SectionViewSet(ModelViewSet):
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
 
-    @action(detail=True, methods=['get', 'post'])
+    @action(detail=True, methods=['get', 'post', 'put'])
     def subjects(self, request, pk=None):
-        if request.method === 'POST':
-            return self.handle_subject_assignment()
+        if request.method == 'POST':
+            return self.add_subject()
+        elif request.method == 'PUT':
+            return self.update_subject_assignment()
         instance = self.get_object()
         queryset = models.SectionSubject.objects.filter(
             section_id=instance.id, is_active=True,
@@ -157,14 +159,32 @@ class SectionViewSet(ModelViewSet):
         serializer = serializers.SectionSubjectSerializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
-    def handle_subject_assignment(self):
-        instance = self.get_object()
+    def add_subject(self):
         data = self.request.data
         serializer = serializers.SectionSubjectSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response(status=status.HTTP_201_CREATED, data=serializer.data)
+            return Response(status=status.HTTP_200_OK, data=serializer.data)
 
+    def update_subject_assignment(self):
+        data = self.request.data
+        if 'id' not in data:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={
+                'message': 'No section subject id provided'
+            })
+        section_subject = models.SectionSubject.objects.filter(id=data['id']).first()
+
+        if not section_subject:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={
+                'message': 'No section subject id provided'
+            })
+        serializer = serializers.SectionSubjectSerializer(
+            instance=section_subject, data=data, partial=True
+        )
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(status=status.HTTP_200_OK, data=serializer.data)
+            
 
 class SubjectViewSet(ModelViewSet):
     queryset = models.Subject.objects.filter(is_active=True)
