@@ -10,11 +10,24 @@ class JWTUserDetailsSerializer(serializers.Serializer):
     def get_user(self, obj):
         user = obj['user']
         data = {
+            'id': user.id,
             'username': user.username,
             'role': user.profile.get_profile_type_display(),
             'fullname': user.profile.fullname
         }
         return data
+
+
+class TeacherAutocompleteSerializer(serializers.ModelSerializer):
+
+    fullname = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.User
+        fields = ('id', 'fullname', )
+
+    def get_fullname(self, instance):
+        return instance.profile.fullname
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
