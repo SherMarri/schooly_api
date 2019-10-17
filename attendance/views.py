@@ -5,7 +5,7 @@ from rest_framework.mixins import (
 from django.core.paginator import Paginator
 from rest_framework import status
 from rest_framework.response import Response
-
+from functools import reduce
 from attendance import serializers
 from attendance import models
 from common.permissions import IsAdmin
@@ -70,24 +70,21 @@ class DailyStudentAttendanceViewSet(
                 if 'comments' in item:
                     matched_item.comments = item['comments']
             items = items.values()
-            models.StudentAttendanceItem.objects.bulk_update(
-                items, ['status', 'comments']
-            )
-            instance.average_attendance = self.get_average_attendance(items)
-            instance.save()
+            if len(items) > 0:
+                models.StudentAttendanceItem.objects.bulk_update(
+                    items, ['status', 'comments']
+                )
+                instance.average_attendance = self.get_average_attendance(items)
+                instance.save()
         return Response(status=status.HTTP_200_OK)
 
     @staticmethod
     def get_average_attendance(items):
-        total = 0.0
-        present = 0.0
-        for item in items:
-            if item.status is None:
-                continue
-            total += 1
-            if item.status == models.StudentAttendanceItem.PRESENT:
-                present += 1
-        return present/total * 100.0 if present > 0 else None
+        present = reduce(
+            lambda x, y: x + 1 if y.status == models.StudentAttendanceItem.PRESENT else x,
+            items, 0.0
+        )
+        return present/len(items) * 100.0 if len(items) > 0 else 0
 
     @staticmethod
     def get_filtered_queryset(params):
