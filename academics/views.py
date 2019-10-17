@@ -180,7 +180,7 @@ class SectionViewSet(ModelViewSet):
 
         if not section_subject:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={
-                'message': 'No section subject id provided'
+                'message': 'No section subject found with given id'
             })
         instance = self.get_object()      
         serializer = serializers.SectionSubjectSerializer(

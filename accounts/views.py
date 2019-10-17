@@ -210,6 +210,9 @@ class StaffAPIView(APIView):
     def get(self, request):
         params = request.query_params
         queryset = self.get_filtered_queryset(params)
+        if 'dropdown' in params and params['dropdown'] == 'true':
+            return self.get_dropdown_list(params)
+
         if 'download' in params and params['download'] == 'true':
             return self.get_downloadable_link(queryset)
 
@@ -225,6 +228,19 @@ class StaffAPIView(APIView):
         results['page'] = page.number
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
+
+    @staticmethod
+    def get_dropdown_list(params):
+        profile_type = params.get('profile_type', None)
+        if profile_type is None:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={
+                'message': 'Profile type not found'
+            })
+        queryset = models.User.objects.filter(
+            profile__profile_type=profile_type, is_active=True
+        ).select_related('profile')
+        serializer = serializers.StaffSerializer(queryset, many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def delete(self, request):
         """
