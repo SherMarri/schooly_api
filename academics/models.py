@@ -35,6 +35,7 @@ class Assessment(BaseModel):
     total_marks = models.FloatField()
     date = models.DateField()
     session = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True)
+    graded = models.BooleanField(default=True)
 
 
 class StudentAssessment(BaseModel):

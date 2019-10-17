@@ -1,7 +1,8 @@
 from academics import models
 from rest_framework import serializers
 from structure.models import Grade, Section
-
+from common.models import Session
+from common.se
 
 class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,3 +55,28 @@ class SectionSubjectSerializer(serializers.ModelSerializer):
             'id': instance.teacher.id,
             'fullname': instance.teacher.profile.fullname,
         }
+
+
+class AssessmentSerializer(serializers.ModelSerializer):
+
+    section_subject = SectionSubjectSerializer(read_only=True)
+    section_subject_id = serializers.PrimaryKeyRelatedField(
+        write_only=True,
+        queryset=models.SectionSubject.objects.filter(is_active=True),
+        source='section_subject'
+    )    
+
+    class Meta:
+        model = models.Assessment
+        fields = ('id', 'name', 'section_subject', 'section_subject_id',
+            'total_marks', 'date', 'session', 'graded',
+        )
+
+
+class StudentAssessmentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.StudentAssessment
+        fields = (
+            'id', 'student', 'assessment', 'obtained_marks', 'comments',
+        )

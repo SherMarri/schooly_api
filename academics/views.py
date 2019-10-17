@@ -155,6 +155,16 @@ class SectionViewSet(ModelViewSet):
         else:
             return self.get_subjects()
 
+    @action(detail=True, methods=['get', 'post'])
+    def assessments(self, request, pk=None):
+        """
+        Handles following operations:
+        1. GET: Return paginated assessments
+        2. POST: Create assessment for section
+        """
+        # TODO
+        pass
+
     def get_subjects(self):
         instance = self.get_object()
         queryset = models.SectionSubject.objects.filter(
