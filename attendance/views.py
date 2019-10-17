@@ -80,10 +80,9 @@ class DailyStudentAttendanceViewSet(
 
     @staticmethod
     def get_average_attendance(items):
-        present = 0.0
         present = reduce(
             lambda x, y: x + 1 if y.status == models.StudentAttendanceItem.PRESENT else x,
-            items, present
+            items, 0.0
         )
         return present/len(items) * 100.0 if len(items) > 0 else 0
 
