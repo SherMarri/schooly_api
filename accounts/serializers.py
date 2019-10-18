@@ -230,6 +230,7 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
         # update profile
         profile.fullname = validated_data['fullname']
         profile.contact = validated_data['contact']
+        profile.profile_type = validated_data['profile_type']
         profile.save()
 
 
