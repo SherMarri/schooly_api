@@ -1,6 +1,8 @@
 from django.core.paginator import Paginator
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from academics import models, serializers, permissions
@@ -17,8 +19,6 @@ import os
 import datetime
 import csv
 settings = LazySettings()
-
-
 
 
 class GradeViewSet(ModelViewSet):
@@ -187,9 +187,21 @@ class SectionViewSet(ModelViewSet):
     def add_subject(self):
         data = self.request.data
         serializer = serializers.SectionSubjectSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(status=status.HTTP_200_OK, data=serializer.data)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(status=status.HTTP_200_OK, data=serializer.data)
+        except ValidationError as exception:
+            errors = serializer.errors
+            if 'non_field_errors' in errors:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={
+                    'code': 'SUBJECT_EXISTS',
+                    'message': 'This subject already exists in this section.'
+                })
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+        except:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
 
     def update_subject_assignment(self):
         data = self.request.data
