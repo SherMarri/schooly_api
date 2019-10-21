@@ -10,7 +10,10 @@ from notifications.serializers import NotificationSerializer
 from structure.models import Grade, Section
 from notifications.views import NotificationViewSet
 from attendance.views import DailyStudentAttendanceViewSet
+from accounts.views import StudentAPIView
 from attendance.serializers import DailyStudentAttendanceSerializer
+from accounts.serializers import StudentSerializer
+
 
 class GradeViewSet(ModelViewSet):
     queryset = Grade.objects.filter(is_active=True).prefetch_related('sections')
@@ -145,6 +148,13 @@ class SectionViewSet(ModelViewSet):
         results['page'] = page.number
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
+
+    @action(detail=True, methods=['get'])
+    def students(self, request, pk=None):
+        instance = self.get_object()
+        queryset = models.User.objects.filter(profile__student_info__section_id=instance.id, is_active=True)
+        serializer = StudentSerializer(queryset, many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     @action(detail=True, methods=['get', 'post', 'put'])
     def subjects(self, request, pk=None):
