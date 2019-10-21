@@ -159,7 +159,9 @@ class SectionViewSet(ModelViewSet):
     def students(self, request, pk=None):
         instance = self.get_object()
         params = request.query_params
-        queryset = models.User.objects.filter(profile__student_info__section_id=instance.id, is_active=True)
+        queryset = models.User.objects.filter(
+            profile__student_info__section_id=instance.id, is_active=True
+        ).select_related('profile__student_info')
         if 'download' in params and params['download'] == 'true':
             return self.get_downloadable_link(queryset)
         serializer = StudentSerializer(queryset, many=True)
