@@ -74,9 +74,8 @@ class AssessmentSerializer(serializers.ModelSerializer):
 
 
 class StudentAssessmentSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = models.StudentAssessment
-        fields = (
-            'id', 'student', 'assessment', 'obtained_marks', 'comments',
+        fields = ('id', 'student', 'student_id', 'assessment', 'obtained_marks',
+            'comments',
         )

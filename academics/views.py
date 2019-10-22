@@ -176,14 +176,14 @@ class SectionViewSet(ModelViewSet):
         else:
             return self.get_subjects()
 
-    @action(detail=True, methods=['get', 'post'])
+    @action(detail=True, methods=['get', 'post', 'put'])
     def assessments(self, request, pk=None):
         """
         Handles following operations:
         1. GET: Return paginated assessments
         2. POST: Create assessment for section
+        3. PUT: Update student marks/points in assessment
         """
-        # TODO
         pass
 
     def get_subjects(self):
