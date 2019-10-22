@@ -1,6 +1,7 @@
 from django.core.paginator import Paginator
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
@@ -10,7 +11,15 @@ from notifications.serializers import NotificationSerializer
 from structure.models import Grade, Section
 from notifications.views import NotificationViewSet
 from attendance.views import DailyStudentAttendanceViewSet
+from accounts.views import StudentAPIView
 from attendance.serializers import DailyStudentAttendanceSerializer
+from accounts.serializers import StudentSerializer
+from django.conf import LazySettings
+import os
+import datetime
+import csv
+settings = LazySettings()
+
 
 class GradeViewSet(ModelViewSet):
     queryset = Grade.objects.filter(is_active=True).prefetch_related('sections')
@@ -146,6 +155,18 @@ class SectionViewSet(ModelViewSet):
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
 
+    @action(detail=True, methods=['get'])
+    def students(self, request, pk=None):
+        instance = self.get_object()
+        params = request.query_params
+        queryset = models.User.objects.filter(
+            profile__student_info__section_id=instance.id, is_active=True
+        ).select_related('profile__student_info')
+        if 'download' in params and params['download'] == 'true':
+            return self.get_downloadable_link(queryset)
+        serializer = StudentSerializer(queryset, many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
+
     @action(detail=True, methods=['get', 'post', 'put'])
     def subjects(self, request, pk=None):
         if request.method == 'POST':
@@ -176,9 +197,21 @@ class SectionViewSet(ModelViewSet):
     def add_subject(self):
         data = self.request.data
         serializer = serializers.SectionSubjectSerializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(status=status.HTTP_200_OK, data=serializer.data)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(status=status.HTTP_200_OK, data=serializer.data)
+        except ValidationError as exception:
+            errors = serializer.errors
+            if 'non_field_errors' in errors:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={
+                    'code': 'SUBJECT_EXISTS',
+                    'message': 'This subject already exists in this section.'
+                })
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
+        except:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
 
     def update_subject_assignment(self):
         data = self.request.data
@@ -190,7 +223,7 @@ class SectionViewSet(ModelViewSet):
 
         if not section_subject:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={
-                'message': 'No section subject id provided'
+                'message': 'No section subject found with given id'
             })
         instance = self.get_object()      
         serializer = serializers.SectionSubjectSerializer(
@@ -207,7 +240,26 @@ class SectionViewSet(ModelViewSet):
                 )
             serializer.save()
             return Response(status=status.HTTP_200_OK, data=serializer.data)
-            
+
+    @staticmethod
+    def get_downloadable_link(queryset):
+        timestamp = datetime.datetime.now().strftime("%f")
+        file_name = f'section_students_{timestamp}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([
+                'GR Number', 'Full Name', 'Average Attendance'
+            ])
+            for student in queryset:
+                writer.writerow(SectionViewSet.get_csv_row(student))
+        return Response(file_name, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_csv_row(student):
+        return [
+            student.profile.student_info.gr_number, student.profile.fullname, '75%'
+        ]
+
 
 class SubjectViewSet(ModelViewSet):
     queryset = models.Subject.objects.filter(is_active=True)
