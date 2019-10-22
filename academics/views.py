@@ -176,16 +176,6 @@ class SectionViewSet(ModelViewSet):
         else:
             return self.get_subjects()
 
-    @action(detail=True, methods=['get', 'post', 'put'])
-    def assessments(self, request, pk=None):
-        """
-        Handles following operations:
-        1. GET: Return paginated assessments
-        2. POST: Create assessment for section
-        3. PUT: Update student marks/points in assessment
-        """
-        pass
-
     def get_subjects(self):
         instance = self.get_object()
         queryset = models.SectionSubject.objects.filter(
@@ -241,6 +231,29 @@ class SectionViewSet(ModelViewSet):
             serializer.save()
             return Response(status=status.HTTP_200_OK, data=serializer.data)
 
+    @action(detail=True, methods=['get', 'post', 'put'])
+    def assessments(self, request, pk=None):
+        """
+        Handles following operations:
+        1. GET: Return paginated assessments
+        2. POST: Create assessment for section
+        3. PUT: Update student marks/points in assessment
+        """
+        if request.method == 'POST':
+            try:
+                assessment = AssessmentViewSet.add_assessment(request.data)
+                return Response(status=status.HTTP_200_OK, data=assessment)
+            except ValidationError as e:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data=e.errors)
+
+        elif request.method == 'PUT':
+            return AssessmentViewSet.update_assessment(request.data)
+        else:
+            instance = self.get_object()
+            data = AssessmentViewSet.get_assessments(request.query_params, instance.id)
+            return Response(status=status.HTTP_200_OK, data=data)
+
+
     @staticmethod
     def get_downloadable_link(queryset):
         timestamp = datetime.datetime.now().strftime("%f")
@@ -259,6 +272,46 @@ class SectionViewSet(ModelViewSet):
         return [
             student.profile.student_info.gr_number, student.profile.fullname, '75%'
         ]
+
+
+class AssessmentViewSet(ModelViewSet):
+    @staticmethod
+    def get_assessments(params, section_id):
+        queryset = AssessmentViewSet.get_filtered_queryset(params, section_id)
+        serializer = serializers.AssessmentSerializer(queryset, many=True)
+        return serializer.data
+
+    @staticmethod
+    def add_assessment(data):
+        data = data.copy()
+        data['session_id'] = models.Session.objects.filter(is_active=True).first().id
+        serializer = serializers.AssessmentSerializer(data=data)
+        try:
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return serializer.data
+        except ValidationError as e:
+            raise e
+
+    @staticmethod
+    def update_assessment(data):
+        pass
+
+    @staticmethod
+    def get_filtered_queryset(params, section_id):
+        queryset = models.Assessment.objects.filter(
+            is_active=True, section_subject__section_id=section_id
+        )
+        if 'section_subject_id' in params and params['section_subject_id'] != '-1':
+            queryset = queryset.filter(section_subject_id=params['section_subject_id'])
+        if 'graded' in params and params['graded'] != '-1':
+            graded_value = True if params['graded'] == 'true' else False
+            queryset = queryset.filter(graded=graded_value)
+        if 'start_date' in params:
+            queryset = queryset.filter(date__gte=params['start_date'])
+        if 'end_date' in params:
+            queryset = queryset.filter(date__lte=params['end_date'])
+        return queryset.order_by('-date')
 
 
 class SubjectViewSet(ModelViewSet):
