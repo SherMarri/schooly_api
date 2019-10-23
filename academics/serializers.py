@@ -89,10 +89,11 @@ class AssessmentSerializer(serializers.ModelSerializer):
 
 class AssessmentDetailsSerializer(serializers.ModelSerializer):
     items = serializers.SerializerMethodField()
+    section_subject = SectionSubjectSerializer(read_only=True)
 
     class Meta:
         model = models.Assessment
-        fields = ('id', 'name', 'total_marks', 'date', 'items')
+        fields = ('id', 'name', 'total_marks', 'date', 'graded', 'section_subject', 'items')
 
     def get_items(self, instance):
         queryset = models.StudentAssessment.objects.filter(
