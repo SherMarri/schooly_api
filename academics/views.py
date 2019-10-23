@@ -275,11 +275,58 @@ class SectionViewSet(ModelViewSet):
 
 
 class AssessmentViewSet(ModelViewSet):
+    serializer_class = serializers.AssessmentSerializer
+    queryset = models.Assessment.objects.filter(is_active=True)
+    permission_classes = (IsAdmin,)
+
+    def list(self, request, *args, **kwargs):
+        pass
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = serializers.AssessmentDetailsSerializer(
+            instance=instance
+        )
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """
+        For updating items of a student assessment entry
+        """
+        data = request.data
+        instance = self.get_object()
+        if 'items' in data:
+            items = instance.items.all()
+            items = {i.id: i for i in items}
+            for item in data['items']:
+                matched_item = items.get(item['id'], None)
+                if matched_item is None:
+                    continue
+                matched_item.obtained_marks = item['obtained_marks']
+                if 'comments' in item:
+                    matched_item.comments = item['comments']
+            items = items.values()
+            if len(items) > 0:
+                models.StudentAssessment.objects.bulk_update(
+                    items, ['obtained_marks', 'comments']
+                )
+                instance.save()
+        return Response(status=status.HTTP_200_OK)
+
     @staticmethod
     def get_assessments(params, section_id):
         queryset = AssessmentViewSet.get_filtered_queryset(params, section_id)
-        serializer = serializers.AssessmentSerializer(queryset, many=True)
-        return serializer.data
+        paginator = Paginator(queryset, 20)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        serializer = serializers.AssessmentSerializer(page, many=True)
+        results = {}
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return results
 
     @staticmethod
     def add_assessment(data):

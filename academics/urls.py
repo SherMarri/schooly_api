@@ -8,6 +8,7 @@ router = DefaultRouter()
 router.register('subjects', views.SubjectViewSet, basename='academics-subjects')
 router.register('grades', views.GradeViewSet, basename='academics-grades')
 router.register('sections', views.SectionViewSet, basename='academics-sections')
+router.register('assessments', views.AssessmentViewSet, basename='academics-sections')
 
 
 urlpatterns = [

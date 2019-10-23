@@ -39,7 +39,10 @@ class Assessment(BaseModel):
 
 
 class StudentAssessment(BaseModel):
+    assessment = models.ForeignKey(
+        Assessment, on_delete=models.CASCADE, null=True,
+        related_name='items'
+    )
     student = models.ForeignKey(User, on_delete=models.CASCADE)
-    assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE)
     obtained_marks = models.FloatField(null=True, blank=True)
     comments = models.TextField(max_length=128, null=True, blank=True)
