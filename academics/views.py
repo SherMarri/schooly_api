@@ -278,8 +278,17 @@ class AssessmentViewSet(ModelViewSet):
     @staticmethod
     def get_assessments(params, section_id):
         queryset = AssessmentViewSet.get_filtered_queryset(params, section_id)
-        serializer = serializers.AssessmentSerializer(queryset, many=True)
-        return serializer.data
+        paginator = Paginator(queryset, 20)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        serializer = serializers.AssessmentSerializer(page, many=True)
+        results = {}
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return results
 
     @staticmethod
     def add_assessment(data):
