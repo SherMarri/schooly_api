@@ -2,6 +2,8 @@ from academics import models
 from rest_framework import serializers
 from structure.models import Grade, Section
 from accounts.models import Profile
+from accounts.serializers import StudentSerializer
+
 
 
 class SubjectSerializer(serializers.ModelSerializer):
@@ -85,7 +87,24 @@ class AssessmentSerializer(serializers.ModelSerializer):
         return assessment
 
 
+class AssessmentDetailsSerializer(serializers.ModelSerializer):
+    items = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Assessment
+        fields = ('id', 'name', 'total_marks', 'date', 'items')
+
+    def get_items(self, instance):
+        queryset = models.StudentAssessment.objects.filter(
+            assessment=instance, is_active=True
+        ).select_related('student__profile__student_info')
+        serializer = StudentAssessmentSerializer(queryset, many=True)
+        return serializer.data
+
+
 class StudentAssessmentSerializer(serializers.ModelSerializer):
+    student = StudentSerializer(read_only=True)
+
     class Meta:
         model = models.StudentAssessment
         fields = ('id', 'student', 'student_id', 'assessment', 'obtained_marks',
