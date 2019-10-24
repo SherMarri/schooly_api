@@ -126,11 +126,11 @@ class DailyStudentAttendanceViewSet(
     @staticmethod
     def get_csv_row(student):
         status = None
-        if student['status'] == 1:
+        if student['status'] == models.StudentAttendanceItem.PRESENT:
             status = 'P'
-        elif student['status'] == 2:
+        elif student['status'] == models.StudentAttendanceItem.ABSENT:
             status = 'A'
-        elif student['status'] == 3:
+        elif student['status'] == models.StudentAttendanceItem.LEAVE:
             status = 'L'
         return [
             student['student']['profile']['gr_number'],
