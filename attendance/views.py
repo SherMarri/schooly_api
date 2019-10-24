@@ -9,6 +9,12 @@ from functools import reduce
 from attendance import serializers
 from attendance import models
 from common.permissions import IsAdmin
+import os
+import datetime
+import csv
+from django.conf import LazySettings
+settings = LazySettings()
+
 
 class DailyStudentAttendanceViewSet(
     CreateModelMixin, ListModelMixin,
@@ -48,9 +54,13 @@ class DailyStudentAttendanceViewSet(
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
+        params = request.query_params
         serializer = serializers.DailyStudentAttendanceDetailsSerializer(
             instance=instance
         )
+        if 'download' in params and params['download'] == 'true':
+            return self.get_downloadable_link(serializer.data)
+
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def update(self, request, *args, **kwargs):
@@ -96,3 +106,36 @@ class DailyStudentAttendanceViewSet(
         if 'end_date' in params:
             queryset = queryset.filter(date__lte=params['end_date'])
         return queryset.order_by('-date')
+
+    @staticmethod
+    def get_downloadable_link(queryset):
+        timestamp = datetime.datetime.now().strftime("%f")
+        date = queryset['date'].replace('-', '_')
+        grade = queryset['section']['grade']
+        section = queryset['section']['name']
+        file_name = f'{grade}_{section}_attendance_{date}_{timestamp}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([
+                'GR Number', 'Full Name', 'Status', 'Comments'
+            ])
+            for student in queryset['items']:
+                writer.writerow(DailyStudentAttendanceViewSet.get_csv_row(student))
+        return Response(file_name, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_csv_row(student):
+        status = None
+        if student['status'] == models.StudentAttendanceItem.PRESENT:
+            status = 'P'
+        elif student['status'] == models.StudentAttendanceItem.ABSENT:
+            status = 'A'
+        elif student['status'] == models.StudentAttendanceItem.LEAVE:
+            status = 'L'
+        return [
+            student['student']['profile']['gr_number'],
+            student['student']['profile']['fullname'],
+            status,
+            student['comments']
+        ]
+
