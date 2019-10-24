@@ -284,9 +284,12 @@ class AssessmentViewSet(ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
+        params = request.query_params
         serializer = serializers.AssessmentDetailsSerializer(
             instance=instance
         )
+        if 'download' in params and params['download'] == 'true':
+            return self.get_downloadable_link(serializer.data)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def update(self, request, *args, **kwargs):
@@ -359,6 +362,30 @@ class AssessmentViewSet(ModelViewSet):
         if 'end_date' in params:
             queryset = queryset.filter(date__lte=params['end_date'])
         return queryset.order_by('-date')
+
+    @staticmethod
+    def get_downloadable_link(queryset):
+        grade = queryset['section_subject']['section']['grade']
+        section = queryset['section_subject']['section']['name']
+        name = queryset['name'].replace(" ", "_")
+        date = queryset['date'].replace("-", "_")
+        file_name = f'{grade}_{section}_{name}_{date}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([
+                'GR Number', 'Full Name', 'Obtained Marks', 'Comments'
+            ])
+            items = queryset['items']
+            for student in items:
+                writer.writerow(AssessmentViewSet.get_csv_row(student))
+        return Response(file_name, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_csv_row(student):
+        return [
+            student['student']['profile']['gr_number'], student['student']['profile']['fullname'],
+            student['obtained_marks'], student['comments'],
+        ]
 
 
 class SubjectViewSet(ModelViewSet):
