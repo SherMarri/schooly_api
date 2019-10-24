@@ -3,6 +3,8 @@ from attendance import models
 from accounts.serializers import StudentSerializer
 from academics.serializers import SectionSerializer
 
+from datetime import datetime
+
 
 class DailyStudentAttendanceSerializer(serializers.ModelSerializer):
     creator = serializers.SerializerMethodField(read_only=True)
@@ -13,7 +15,7 @@ class DailyStudentAttendanceSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = models.DailyStudentAttendance
-        fields = ('id', 'date', 'section', 'section_id', 'session',
+        fields = ('id', 'section', 'section_id', 'date', 'session',
             'created_by', 'creator', 'average_attendance',)
         read_only_fields = ('creator', 'section', 'average_attendance',)
 
@@ -24,6 +26,11 @@ class DailyStudentAttendanceSerializer(serializers.ModelSerializer):
             'id': instance.created_by.id,
             'fullname': instance.created_by.profile.fullname,
         }
+
+    def validate_date(self, date):
+        if models.DailyStudentAttendance.objects.filter(date=date, section_id=self.initial_data['section_id']).exists():
+            raise serializers.ValidationError('Attendance already exists for given date.')
+        return date
 
     def validate_created_by(self, user):
         try:

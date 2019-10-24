@@ -10,11 +10,11 @@ from attendance import serializers
 from attendance import models
 from common.permissions import IsAdmin
 
+
 class DailyStudentAttendanceViewSet(
     CreateModelMixin, ListModelMixin,
     RetrieveModelMixin, GenericViewSet,
     UpdateModelMixin):
-
     serializer_class = serializers.DailyStudentAttendanceSerializer
     queryset = models.DailyStudentAttendance.objects.filter(is_active=True)
     permission_classes = (IsAdmin,)
@@ -84,7 +84,7 @@ class DailyStudentAttendanceViewSet(
             lambda x, y: x + 1 if y.status == models.StudentAttendanceItem.PRESENT else x,
             items, 0.0
         )
-        return present/len(items) * 100.0 if len(items) > 0 else 0
+        return present / len(items) * 100.0 if len(items) > 0 else 0
 
     @staticmethod
     def get_filtered_queryset(params):
