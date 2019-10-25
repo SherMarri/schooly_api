@@ -307,7 +307,7 @@ class SectionViewSet(ModelViewSet):
             writer.writerow(['Student'] + dates)
             for key, statuses in students.items():
                 writer.writerow(SectionViewSet.get_attendance_row(key, statuses, dates))
-        return Response(file_name, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK, data=file_name)
 
     @staticmethod
     def get_attendance_row(student, values, dates):
