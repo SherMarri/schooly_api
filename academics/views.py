@@ -13,6 +13,7 @@ from notifications.views import NotificationViewSet
 from attendance.views import DailyStudentAttendanceViewSet
 from accounts.views import StudentAPIView
 from attendance.serializers import DailyStudentAttendanceSerializer
+from attendance.models import StudentAttendanceItem
 from accounts.serializers import StudentSerializer
 from django.conf import LazySettings
 import os
@@ -143,6 +144,11 @@ class SectionViewSet(ModelViewSet):
         queryset = DailyStudentAttendanceViewSet.get_filtered_queryset(
             params
         )
+        if 'download' in params:
+            queryset = queryset.prefetch_related(
+                'items__student__profile__student_info'
+            )
+            return self.handle_download_attendance(queryset)
         paginator = Paginator(queryset, 30)
         if 'page' in params:
             page = paginator.page(int(params['page']))
@@ -272,6 +278,40 @@ class SectionViewSet(ModelViewSet):
         return [
             student.profile.student_info.gr_number, student.profile.fullname, '75%'
         ]
+
+    @staticmethod
+    def handle_download_attendance(queryset):
+        timestamp = datetime.datetime.now().strftime("%f")
+        dates = []
+        students = {}
+        date_format = '%d/%m/%Y'
+        for attendance in queryset:
+            formatted_date = attendance.date.strftime(date_format)
+            dates.append(formatted_date)
+            for item in attendance.items.all():
+                student_name = f'{item.student.profile.fullname} ({item.student.profile.student_info.gr_number})'
+                if student_name not in students:
+                    students[student_name] = {}
+                attendanceStatus = ''
+                if item.status == StudentAttendanceItem.PRESENT:
+                    attendanceStatus = 'P'
+                elif item.status == StudentAttendanceItem.ABSENT:
+                    attendanceStatusstatus = 'A'
+                elif item.status == StudentAttendanceItem.LEAVE:
+                    attendanceStatus = 'L'
+                students[student_name][formatted_date] = attendanceStatus
+        
+        file_name = f'attendance_{timestamp}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(['Student'] + dates)
+            for key, statuses in students.items():
+                writer.writerow(SectionViewSet.get_attendance_row(key, statuses, dates))
+        return Response(file_name, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_attendance_row(student, values, dates):
+        return [student] + [values[date] if date in values else '' for date in dates]
 
 
 class AssessmentViewSet(ModelViewSet):
