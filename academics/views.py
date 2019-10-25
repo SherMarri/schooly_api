@@ -288,30 +288,31 @@ class SectionViewSet(ModelViewSet):
         for attendance in queryset:
             formatted_date = attendance.date.strftime(date_format)
             dates.append(formatted_date)
-            for item in attendance.items:
-                student_name = f'{item.student.profile.fullname (item.student.profile.student_info.gr_number)}'
+            for item in attendance.items.all():
+                student_name = f'{item.student.profile.fullname} ({item.student.profile.student_info.gr_number})'
                 if student_name not in students:
                     students[student_name] = {}
-                status = ''
+                attendanceStatus = ''
                 if item.status == StudentAttendanceItem.PRESENT:
-                    status = 'P'
+                    attendanceStatus = 'P'
                 elif item.status == StudentAttendanceItem.ABSENT:
-                    status = 'A'
+                    attendanceStatusstatus = 'A'
                 elif item.status == StudentAttendanceItem.LEAVE:
-                    status = 'L'
-                students[student_name][formatted_date] = status
+                    attendanceStatus = 'L'
+                students[student_name][formatted_date] = attendanceStatus
         
         file_name = f'attendance_{timestamp}.csv'
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow(['Student'] + dates)
             for key, statuses in students.items():
-                writer.writerow(self.get_attendance_row(key, statuses, dates))
+                writer.writerow(SectionViewSet.get_attendance_row(key, statuses, dates))
         return Response(file_name, status=status.HTTP_200_OK)
 
     @staticmethod
     def get_attendance_row(student, values, dates):
         return [student] + [values[date] if date in values else '' for date in dates]
+
 
 class AssessmentViewSet(ModelViewSet):
     serializer_class = serializers.AssessmentSerializer
