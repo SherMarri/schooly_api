@@ -292,14 +292,14 @@ class SectionViewSet(ModelViewSet):
                 student_name = f'{item.student.profile.fullname} ({item.student.profile.student_info.gr_number})'
                 if student_name not in students:
                     students[student_name] = {}
-                attendanceStatus = ''
+                status = ''
                 if item.status == StudentAttendanceItem.PRESENT:
-                    attendanceStatus = 'P'
+                    status = 'P'
                 elif item.status == StudentAttendanceItem.ABSENT:
-                    attendanceStatusstatus = 'A'
+                    status = 'A'
                 elif item.status == StudentAttendanceItem.LEAVE:
-                    attendanceStatus = 'L'
-                students[student_name][formatted_date] = attendanceStatus
+                    status = 'L'
+                students[student_name][formatted_date] = status
         
         file_name = f'attendance_{timestamp}.csv'
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
