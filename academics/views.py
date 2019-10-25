@@ -147,7 +147,7 @@ class SectionViewSet(ModelViewSet):
         if 'download' in params:
             queryset = queryset.prefetch_related(
                 'items__student__profile__student_info'
-            )
+            ).order_by('date')
             return self.handle_download_attendance(queryset)
         paginator = Paginator(queryset, 30)
         if 'page' in params:
