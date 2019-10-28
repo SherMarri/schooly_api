@@ -54,7 +54,7 @@ class GradeViewSet(ModelViewSet):
                 request.user.groups.filter(name='Admin').count() > 0:
             instance = self.get_object()
             return self.get_grade_summary(instance)
-        return super().list(self, request, args, kwargs)
+        return super().retrieve(self, request, args, kwargs)
 
     def list_grades_summary(self):
         """
@@ -125,6 +125,7 @@ class GradeViewSet(ModelViewSet):
             }
             sections[section_info.id] = section
         result = {
+            'name': instance.name,
             'students': AccountModels.StudentInfo.objects.filter(is_active=True, section__grade_id=instance.id).count(),
             'subjects': models.SectionSubject.objects.filter(
                 section__grade_id=instance.id, is_active=True).distinct('subject_id').count(),
@@ -177,6 +178,18 @@ class SectionViewSet(ModelViewSet):
         Lists the sections in the system
         """
         return super().list(request, args, kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve the section.
+        If summary flag is true, return section with their summaries
+        """
+        if 'summary' in request.query_params and \
+                request.user.groups.filter(name='Admin').count() > 0:
+            instance = self.get_object()
+            return self.get_section_summary(instance)
+        return super().retrieve(self, request, args, kwargs)
+
 
     @action(detail=True, methods=['get'])
     def notifications(self, request, pk=None):
@@ -368,6 +381,27 @@ class SectionViewSet(ModelViewSet):
     @staticmethod
     def get_attendance_row(student, values, dates):
         return [student] + [values[date] if date in values else '' for date in dates]
+
+    def get_section_summary(self, instance):
+        result = {
+            'students': AccountModels.StudentInfo.objects.filter(is_active=True, section_id=instance.id).count(),
+            'subjects': models.SectionSubject.objects.filter(
+                section_id=instance.id, is_active=True).distinct('subject_id').count(),
+            'teachers': models.SectionSubject.objects.filter(
+                section_id=instance.id, is_active=True).distinct('teacher_id').count(),
+            'attendance': 79,
+            'monthly_attendance': [
+                {
+                    'month': 'January',
+                    'value': 76
+                }
+            ]
+        }
+
+        return Response(status=status.HTTP_200_OK, data=result)
+
+        # TODO
+
 
 
 class AssessmentViewSet(ModelViewSet):
