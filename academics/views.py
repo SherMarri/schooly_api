@@ -45,6 +45,17 @@ class GradeViewSet(ModelViewSet):
             return self.list_grades_summary()
         return super().list(self, request, args, kwargs)
 
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve the grade with summary.
+        If summary flag is true, return grades with their summaries
+        """
+        if 'summary' in request.query_params and \
+                request.user.groups.filter(name='Admin').count() > 0:
+            instance = self.get_object()
+            return self.get_grade_summary(instance)
+        return super().list(self, request, args, kwargs)
+
     def list_grades_summary(self):
         """
         Method for returning following information in response:
@@ -63,12 +74,6 @@ class GradeViewSet(ModelViewSet):
         grade_set = Grade.objects.filter(
             is_active=True
         )
-
-        total_students = 0
-        total_subjects = 0
-        total_teachers = 0
-        total_attendance = 0
-        session_attendance = []
 
         grades = {}
         for grade_info in grade_set:
@@ -92,6 +97,40 @@ class GradeViewSet(ModelViewSet):
             'students': AccountModels.StudentInfo.objects.filter(is_active=True).count(),
             'teachers': AccountModels.StaffInfo.objects.filter(is_active=True).count(),
             'subjects': models.Subject.objects.filter(is_active=True).count(),
+            'attendance': 79,
+            'monthly_attendance': [
+                {
+                    'month': 'January',
+                    'value': 76
+                }
+            ]
+        }
+
+        return Response(status=status.HTTP_200_OK, data=result)
+
+        # TODO
+
+    def get_grade_summary(self, instance):
+
+        sections = {}
+        for section_info in instance.sections.all():
+            section = {
+                'id': section_info.id,
+                'name': section_info.name,
+                'students': AccountModels.StudentInfo.objects.filter(is_active=True,
+                                                                     section_id=section_info.id).count(),
+                'subjects': models.SectionSubject.objects.filter(
+                    section_id=section_info.id, is_active=True).distinct('subject_id').count(),
+                'attendance': 80,
+            }
+            sections[section_info.id] = section
+        result = {
+            'students': AccountModels.StudentInfo.objects.filter(is_active=True, section__grade_id=instance.id).count(),
+            'subjects': models.SectionSubject.objects.filter(
+                section__grade_id=instance.id, is_active=True).distinct('subject_id').count(),
+            'sections': sections.values(),
+            'teachers': models.SectionSubject.objects.filter(
+                section__grade_id=instance.id, is_active=True).distinct('teacher_id').count(),
             'attendance': 79,
             'monthly_attendance': [
                 {
