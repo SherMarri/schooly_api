@@ -80,7 +80,7 @@ class GradeViewSet(ModelViewSet):
             grade = {
                 'id': grade_info.id,
                 'name': grade_info.name,
-                'students': 0,
+                'students': AccountModels.StudentInfo.objects.filter(is_active=True, section__grade_id=grade_info.id).count(),
                 'subjects': models.SectionSubject.objects.filter(
                     section__grade_id=grade_info.id, is_active=True).distinct('subject_id').count(),
                 'sections': models.Section.objects.filter(grade_id=grade_info.id).count(),
@@ -88,8 +88,6 @@ class GradeViewSet(ModelViewSet):
                     section__grade_id=grade_info.id, is_active=True).distinct('teacher_id').count(),
                 'attendance': 0
             }
-            for section in grade_info.sections.all():
-                grade['students'] += section.students.count()
             grades[grade_info.id] = grade
 
         result = {
