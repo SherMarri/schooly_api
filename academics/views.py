@@ -11,7 +11,7 @@ from notifications.serializers import NotificationSerializer
 from structure.models import Grade, Section
 from notifications.views import NotificationViewSet
 from attendance.views import DailyStudentAttendanceViewSet
-from accounts.views import StudentAPIView
+from rest_framework.views import APIView
 from attendance.serializers import DailyStudentAttendanceSerializer
 from attendance.models import StudentAttendanceItem
 from accounts.serializers import StudentSerializer
@@ -445,3 +445,13 @@ class SubjectViewSet(ModelViewSet):
         instance.is_active = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ExamsAPIView(APIView):
+    permission_classes = [IsAdmin,]
+
+    def post(self, request):
+        pass
+
+    def get(self, request):
+        pass

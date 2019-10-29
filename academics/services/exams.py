@@ -1,4 +1,5 @@
 from academics import models
+from datetime import date
 
 
 class ExamService:
@@ -25,9 +26,9 @@ class ExamService:
         
         assessments = []
         for section_subject in section_subjects:
-            assessment = models.Assessment(
+            assessment = models.Assessment.objects.filter(
                 exam=exam, total_marks=section_subject['total_marks'],
-                section_subject_id=section_subject;'id'], date=date.today()
+                section_subject_id=section_subject['id'], date=date.today()
             )
             assessments.append(assessment)
         models.Assessment.objects.bulk_create(assessments)
@@ -39,7 +40,7 @@ class ExamService:
         student_assessments = []
         for assessment in assessments.all():
             for id in student_ids:
-                student_assessment = StudentAssessment(
+                student_assessment = models.StudentAssessment.objects.filter(
                     assessment=assessment, student_id=id
                 )
                 student_assessments.append(student_assessment)
@@ -81,7 +82,7 @@ class ExamService:
             is_active=True, profile__student_info__section_id=section.id
         ).values('id').all()
         
-        #Create consolidated assessments for each section subject
+        # Create consolidated assessments for each section subject
         for key, assessments in section_subjects.items():
             total_marks = 0
             for assessment in assessments:

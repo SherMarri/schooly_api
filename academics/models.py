@@ -28,6 +28,7 @@ class SectionSubject(BaseModel):
         return '{0} (Section {1} - Class {2}'.format(
             self.subject.name, self.section.name, self.section.grade.name)
 
+
 class Exam(BaseModel):
     name = models.CharField(max_length=128)
     date = models.DateField()
@@ -51,7 +52,7 @@ class Assessment(BaseModel):
     session = models.ForeignKey(
         Session, on_delete=models.SET_NULL, null=True, related_name='assessments'
     )
-    consolidated = models.BooleanField()
+    consolidated = models.BooleanField(default=False)
 
 
 class StudentAssessment(BaseModel):
