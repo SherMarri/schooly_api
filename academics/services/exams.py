@@ -20,27 +20,31 @@ class ExamService:
         Returns:
             Model: An instance of created exam
         """
-        exam = models.Exam(
-            name=name, section=section, consolidated=False, date=date.today()
-        ).save()
-        
+        exam = models.Exam.objects.create(
+            name=name, section_id=section['id'], consolidated=False, date=date.today()
+        )
+
         assessments = []
+        current_session = models.Session.objects.filter(is_active=True).first()
+
         for section_subject in section_subjects:
-            assessment = models.Assessment.objects.filter(
+            assessment = models.Assessment(
                 exam=exam, total_marks=section_subject['total_marks'],
-                section_subject_id=section_subject['id'], date=date.today()
+                section_subject_id=section_subject['id'], date=date.today(),
+                session=current_session
             )
             assessments.append(assessment)
         models.Assessment.objects.bulk_create(assessments)
         assessments = models.Assessment.objects.filter(exam=exam)
         student_ids = models.User.objects.filter(
-            is_active=True, profile__student_info__section_id=section.id
-        ).values('id')
-        
+            is_active=True, profile__student_info__section_id=section['id']
+        ).values_list('id', flat=True)
+
+        student_ids = [id for id in student_ids]
         student_assessments = []
         for assessment in assessments.all():
             for id in student_ids:
-                student_assessment = models.StudentAssessment.objects.filter(
+                student_assessment = models.StudentAssessment(
                     assessment=assessment, student_id=id
                 )
                 student_assessments.append(student_assessment)

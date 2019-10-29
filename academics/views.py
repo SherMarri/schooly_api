@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 from attendance.serializers import DailyStudentAttendanceSerializer
 from attendance.models import StudentAttendanceItem
 from accounts.serializers import StudentSerializer
+from academics.services import exams
 from django.conf import LazySettings
 import os
 import datetime
@@ -448,10 +449,19 @@ class SubjectViewSet(ModelViewSet):
 
 
 class ExamsAPIView(APIView):
-    permission_classes = [IsAdmin,]
+    permission_classes = [IsAdmin, ]
 
     def post(self, request):
-        pass
+        data = request.data
+        try:
+            if "consolidated" in data:
+                exams.ExamService.create_consolidated_exam()
+            else:
+                exams.ExamService.create_exam(data['name'], data['section'], data['section_subjects'])
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_201_CREATED)
 
     def get(self, request):
         pass
