@@ -9,6 +9,7 @@ from academics import models, serializers, permissions
 from common.permissions import IsAdmin, IsTeacher
 from notifications.serializers import NotificationSerializer
 from structure.models import Grade, Section
+from accounts import models as AccountModels
 from notifications.views import NotificationViewSet
 from attendance.views import DailyStudentAttendanceViewSet
 from rest_framework.views import APIView
@@ -20,6 +21,7 @@ from django.conf import LazySettings
 import os
 import datetime
 import csv
+
 settings = LazySettings()
 
 
@@ -40,9 +42,20 @@ class GradeViewSet(ModelViewSet):
         If summary flag is true, return grades with their summaries
         """
         if 'summary' in request.query_params and \
-            request.user.groups.filter(name='Admin').count() > 0:
+                request.user.groups.filter(name='Admin').count() > 0:
             return self.list_grades_summary()
         return super().list(self, request, args, kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve the grade with summary.
+        If summary flag is true, return grades with their summaries
+        """
+        if 'summary' in request.query_params and \
+                request.user.groups.filter(name='Admin').count() > 0:
+            instance = self.get_object()
+            return self.get_grade_summary(instance)
+        return super().retrieve(self, request, args, kwargs)
 
     def list_grades_summary(self):
         """
@@ -61,30 +74,73 @@ class GradeViewSet(ModelViewSet):
         """
         grade_set = Grade.objects.filter(
             is_active=True
-        ).prefetch_related(
-            'sections__students', 'sections__subjects__subject',
-        ).filter(
-            sections__is_active=True, sections__students__is_active=True
         )
 
-        total_students = 0
-        total_subjects = 0
-        total_teachers = 0
-        total_attendance = 0
-        session_attendance = []
-
         grades = {}
-        for g in grade_set:
+        for grade_info in grade_set:
             grade = {
-                'id': g.id,
-                'name': g.name,
-                'students': 0,
-                'sections': g.sections.count(),
-                'teachers': 0,
+                'id': grade_info.id,
+                'name': grade_info.name,
+                'students': AccountModels.StudentInfo.objects.filter(is_active=True, section__grade_id=grade_info.id).count(),
+                'subjects': models.SectionSubject.objects.filter(
+                    section__grade_id=grade_info.id, is_active=True).distinct('subject_id').count(),
+                'sections': models.Section.objects.filter(grade_id=grade_info.id).count(),
+                'teachers': models.SectionSubject.objects.filter(
+                    section__grade_id=grade_info.id, is_active=True).distinct('teacher_id').count(),
                 'attendance': 0
             }
-            for section in g.sections:
-                grade['students'] += section.students.count()
+            grades[grade_info.id] = grade
+
+        result = {
+            'items': grades.values(),
+            'students': AccountModels.StudentInfo.objects.filter(is_active=True).count(),
+            'teachers': AccountModels.StaffInfo.objects.filter(is_active=True).count(),
+            'subjects': models.Subject.objects.filter(is_active=True).count(),
+            'attendance': 79,
+            'monthly_attendance': [
+                {
+                    'month': 'January',
+                    'value': 76
+                }
+            ]
+        }
+
+        return Response(status=status.HTTP_200_OK, data=result)
+
+        # TODO
+
+    def get_grade_summary(self, instance):
+
+        sections = {}
+        for section_info in instance.sections.all():
+            section = {
+                'id': section_info.id,
+                'name': section_info.name,
+                'students': AccountModels.StudentInfo.objects.filter(is_active=True,
+                                                                     section_id=section_info.id).count(),
+                'subjects': models.SectionSubject.objects.filter(
+                    section_id=section_info.id, is_active=True).distinct('subject_id').count(),
+                'attendance': 80,
+            }
+            sections[section_info.id] = section
+        result = {
+            'name': instance.name,
+            'students': AccountModels.StudentInfo.objects.filter(is_active=True, section__grade_id=instance.id).count(),
+            'subjects': models.SectionSubject.objects.filter(
+                section__grade_id=instance.id, is_active=True).distinct('subject_id').count(),
+            'sections': sections.values(),
+            'teachers': models.SectionSubject.objects.filter(
+                section__grade_id=instance.id, is_active=True).distinct('teacher_id').count(),
+            'attendance': 79,
+            'monthly_attendance': [
+                {
+                    'month': 'January',
+                    'value': 76
+                }
+            ]
+        }
+
+        return Response(status=status.HTTP_200_OK, data=result)
 
         # TODO
 
@@ -121,6 +177,18 @@ class SectionViewSet(ModelViewSet):
         Lists the sections in the system
         """
         return super().list(request, args, kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve the section.
+        If summary flag is true, return section with their summaries
+        """
+        if 'summary' in request.query_params and \
+                request.user.groups.filter(name='Admin').count() > 0:
+            instance = self.get_object()
+            return self.get_section_summary(instance)
+        return super().retrieve(self, request, args, kwargs)
+
 
     @action(detail=True, methods=['get'])
     def notifications(self, request, pk=None):
@@ -222,7 +290,7 @@ class SectionViewSet(ModelViewSet):
             return Response(status=status.HTTP_400_BAD_REQUEST, data={
                 'message': 'No section subject found with given id'
             })
-        instance = self.get_object()      
+        instance = self.get_object()
         serializer = serializers.SectionSubjectSerializer(
             instance=section_subject, data=data, partial=True
         )
@@ -259,7 +327,6 @@ class SectionViewSet(ModelViewSet):
             instance = self.get_object()
             data = AssessmentViewSet.get_assessments(request.query_params, instance.id)
             return Response(status=status.HTTP_200_OK, data=data)
-
 
     @staticmethod
     def get_downloadable_link(queryset):
@@ -301,7 +368,7 @@ class SectionViewSet(ModelViewSet):
                 elif item.status == StudentAttendanceItem.LEAVE:
                     attendance_status = 'L'
                 students[student_name][formatted_date] = attendance_status
-        
+
         file_name = f'attendance_{timestamp}.csv'
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
@@ -313,6 +380,27 @@ class SectionViewSet(ModelViewSet):
     @staticmethod
     def get_attendance_row(student, values, dates):
         return [student] + [values[date] if date in values else '' for date in dates]
+
+    def get_section_summary(self, instance):
+        result = {
+            'students': AccountModels.StudentInfo.objects.filter(is_active=True, section_id=instance.id).count(),
+            'subjects': models.SectionSubject.objects.filter(
+                section_id=instance.id, is_active=True).distinct('subject_id').count(),
+            'teachers': models.SectionSubject.objects.filter(
+                section_id=instance.id, is_active=True).distinct('teacher_id').count(),
+            'attendance': 79,
+            'monthly_attendance': [
+                {
+                    'month': 'January',
+                    'value': 76
+                }
+            ]
+        }
+
+        return Response(status=status.HTTP_200_OK, data=result)
+
+        # TODO
+
 
 
 class AssessmentViewSet(ModelViewSet):
