@@ -479,13 +479,13 @@ class AssessmentViewSet(ModelViewSet):
     @staticmethod
     def get_filtered_queryset(params, section_id):
         queryset = models.Assessment.objects.filter(
-            is_active=True, section_subject__section_id=section_id
+            is_active=True, section_subject__section_id=section_id, exam=None,
         )
         if 'section_subject_id' in params and params['section_subject_id'] != '-1':
             queryset = queryset.filter(section_subject_id=params['section_subject_id'])
-        if 'graded' in params and params['graded'] != '-1':
-            graded_value = True if params['graded'] == 'true' else False
-            queryset = queryset.filter(graded=graded_value)
+        # if 'graded' in params and params['graded'] != '-1':
+        #     graded_value = True if params['graded'] == 'true' else False
+        #     queryset = queryset.filter(graded=graded_value)
         if 'start_date' in params:
             queryset = queryset.filter(date__gte=params['start_date'])
         if 'end_date' in params:
@@ -543,7 +543,7 @@ class ExamsAPIView(APIView):
         data = request.data
         try:
             if "consolidated" in data:
-                exams.ExamService.create_consolidated_exam()
+                exams.ExamService.create_consolidated_exam(data['name'], data['section'], data['exam_ids'])
             else:
                 exams.ExamService.create_exam(data['name'], data['section'], data['section_subjects'])
         except Exception as e:

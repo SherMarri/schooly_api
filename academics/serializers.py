@@ -70,7 +70,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Assessment
         fields = ('id', 'name', 'section_subject', 'section_subject_id',
-                  'total_marks', 'date', 'session', 'graded',
+                  'total_marks', 'date', 'session', 'exam',
                   )
 
     def create(self, validated_data):
@@ -93,7 +93,7 @@ class AssessmentDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Assessment
-        fields = ('id', 'name', 'total_marks', 'date', 'graded', 'section_subject', 'items')
+        fields = ('id', 'name', 'total_marks', 'date', 'exam', 'section_subject', 'items')
 
     def get_items(self, instance):
         queryset = models.StudentAssessment.objects.filter(

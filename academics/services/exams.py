@@ -1,5 +1,6 @@
 from academics import models
 from datetime import date
+from django.db.models import Sum
 
 
 class ExamService:
@@ -20,12 +21,14 @@ class ExamService:
         Returns:
             Model: An instance of created exam
         """
+        current_session = models.Session.objects.filter(is_active=True).first()
         exam = models.Exam.objects.create(
-            name=name, section_id=section['id'], consolidated=False, date=date.today()
+            name=name, section_id=section['id'],
+            consolidated=False, date=date.today(),
+            session=current_session
         )
 
         assessments = []
-        current_session = models.Session.objects.filter(is_active=True).first()
 
         for section_subject in section_subjects:
             assessment = models.Assessment(
@@ -66,9 +69,10 @@ class ExamService:
         Returns:
             Model: An instance of created exam
         """
-        exam = models.Exam(
-            name=name, section=section, consolidated=True, date=date.today()
-        ).save()
+        exam = models.Exam.objects.create(
+            name=name, section_id=section['id'], consolidated=True, date=date.today()
+        )
+        current_session = models.Session.objects.filter(is_active=True).first()
 
         """
         Fetch all assessments in provided exam ids and map each assessment against
@@ -83,8 +87,9 @@ class ExamService:
 
         # Fetch students in provided section
         students = models.User.objects.filter(
-            is_active=True, profile__student_info__section_id=section.id
-        ).values('id').all()
+            is_active=True, profile__student_info__section_id=section['id']
+        ).values_list('id', flat=True)
+        student_ids = [id for id in students]
         
         # Create consolidated assessments for each section subject
         for key, assessments in section_subjects.items():
@@ -94,11 +99,12 @@ class ExamService:
             
             assessment = models.Assessment(
                 total_marks=total_marks, exam=exam, consolidated=True,
-                section_subject_id=key
-            ).save()
+                section_subject_id=key, date=date.today(), session=current_session
+            )
+            assessment.save()
 
             student_assessments = []
-            for id in students:
+            for id in student_ids:
                 student_assessment = models.StudentAssessment(
                     assessment=assessment, student_id=id
                 )
@@ -106,8 +112,8 @@ class ExamService:
                     student_id=id, assessment_id__in=[
                         a.id for a in assessments
                     ]
-                ).aggregate(obtained=Sum('obtained_marks')).obtained
-                student_assessment.obtained_marks = obtained_marks
+                ).aggregate(obtained=Sum('obtained_marks'))
+                student_assessment.obtained_marks = obtained_marks['obtained']
                 student_assessments.append(student_assessment)
             models.StudentAssessment.objects.bulk_create(student_assessments)
         return exam
