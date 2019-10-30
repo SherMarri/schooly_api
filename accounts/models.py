@@ -16,6 +16,7 @@ GenderTypes = (
     (FEMALE, 'Female'),
 )
 
+
 class Profile(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
 
@@ -26,9 +27,9 @@ class Profile(BaseModel):
     PARENT = 5
 
     ProfileTypes = (
-        (ADMIN, 'Admin'),
-        (STAFF, 'Staff'),
-        (TEACHER, 'Teacher'),
+        (ADMIN, 'Admin'),  # TODO: Should be 
+        (STAFF, 'Staff'),  # TODO: Keep Staff only
+        (TEACHER, 'Teacher'),  # TODO: Should be removed
         (STUDENT, 'Student'),
         (PARENT, 'Parent')
     )

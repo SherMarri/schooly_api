@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts import models, serializers
-from common.permissions import IsAdmin
+from common.permissions import IsAdmin, IsHR, IsAccountant
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 import os
@@ -54,7 +54,7 @@ class StudentsAutocompleteAPIView(APIView):
 
 
 class StudentAPIView(APIView):
-    permission_classes = (IsAdmin,)
+    permission_classes = [IsAdmin]
 
     def post(self, request):
         data = request.data
@@ -185,7 +185,13 @@ class StudentAPIView(APIView):
 
 
 class StaffAPIView(APIView):
-    permission_classes = (IsAdmin,)
+
+    def get_permissions(self):
+        if self.request.method in ['GET']:
+            permission_classes = [IsAdmin | IsHR | IsAccountant]
+        else:
+            permission_classes = [IsAdmin]
+        return [permission_class() for permission_class in permission_classes]
 
     def post(self, request):
         data = request.data
@@ -204,6 +210,9 @@ class StaffAPIView(APIView):
     def get(self, request):
         params = request.query_params
         queryset = self.get_filtered_queryset(params)
+        if 'dropdown' in params and params['dropdown'] == 'true':
+            return self.get_dropdown_list(params)
+
         if 'download' in params and params['download'] == 'true':
             return self.get_downloadable_link(queryset)
 
@@ -219,6 +228,19 @@ class StaffAPIView(APIView):
         results['page'] = page.number
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
+
+    @staticmethod
+    def get_dropdown_list(params):
+        profile_type = params.get('profile_type', None)
+        if profile_type is None:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={
+                'message': 'Profile type not found'
+            })
+        queryset = models.User.objects.filter(
+            profile__profile_type=profile_type, is_active=True
+        ).select_related('profile')
+        serializer = serializers.StaffSerializer(queryset, many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def delete(self, request):
         """
