@@ -5,7 +5,6 @@ from accounts.models import Profile
 from accounts.serializers import StudentSerializer
 
 
-
 class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Subject
@@ -111,3 +110,9 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
         fields = ('id', 'student', 'student_id', 'assessment', 'obtained_marks',
                   'comments',
                   )
+
+
+class ExamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Exam
+        fields = ('id', 'name', 'date', 'consolidated', 'section_id')

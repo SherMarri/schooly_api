@@ -552,4 +552,16 @@ class ExamsAPIView(APIView):
             return Response(status=status.HTTP_201_CREATED)
 
     def get(self, request):
-        pass
+        params = request.query_params
+        queryset = models.Exam.objects.filter(is_active=True, section_id=params['section_id'])
+        paginator = Paginator(queryset.order_by('-created_at'), 20)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        serializer = serializers.ExamSerializer(page, many=True)
+        results = {}
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return Response(status=status.HTTP_200_OK, data=results)
