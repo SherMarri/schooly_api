@@ -471,29 +471,3 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
 
         return queryset
 
-
-def download_challans_csv(request):
-    file_name = request.GET.get('file_name', None)
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
-    file = open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'))
-    response.content = file
-    return response
-
-
-def download_income_report_csv(request):
-    file_name = request.GET.get('file_name', None)
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
-    file = open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'))
-    response.content = file
-    return response
-
-
-def download_expense_report_csv(request):
-    file_name = request.GET.get('file_name', None)
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
-    file = open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'))
-    response.content = file
-    return response
