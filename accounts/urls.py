@@ -10,14 +10,6 @@ urlpatterns = [
         view=views.StudentsAutocompleteAPIView.as_view(),
         name='students_autocomplete'
     ),
-    url(r'^students/downloadcsv',
-        view=views.download_students_csv,
-        name='students-download-csv'
-    ),
-    url(r'^staff/downloadcsv',
-        view=views.download_staff_csv,
-        name='staff-download-csv'
-    ),
     path('students/',
         view=views.StudentAPIView.as_view(),
         name='students'
