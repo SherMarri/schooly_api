@@ -359,9 +359,11 @@ class SectionViewSet(ModelViewSet):
                 student_name = f'{item.student.profile.fullname} ({item.student.profile.student_info.gr_number})'
                 if student_name not in students:
                     students[student_name] = {}
+                    students[student_name]['total_presents'] = 0
                 attendance_status = ''
                 if item.status == StudentAttendanceItem.PRESENT:
                     attendance_status = 'P'
+                    students[student_name]['total_presents'] = students[student_name]['total_presents'] + 1
                 elif item.status == StudentAttendanceItem.ABSENT:
                     attendance_status = 'A'
                 elif item.status == StudentAttendanceItem.LEAVE:
@@ -371,14 +373,14 @@ class SectionViewSet(ModelViewSet):
         file_name = f'attendance_{timestamp}.csv'
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow(['Student'] + dates)
+            writer.writerow(['Student'] + ['Average %'] + dates)
             for key, statuses in students.items():
                 writer.writerow(SectionViewSet.get_attendance_row(key, statuses, dates))
         return Response(status=status.HTTP_200_OK, data=file_name)
 
     @staticmethod
     def get_attendance_row(student, values, dates):
-        return [student] + [values[date] if date in values else '' for date in dates]
+        return [student] + [round((values['total_presents']/len(dates)) * 100), 1] + [values[date] if date in values else '' for date in dates]
 
     def get_section_summary(self, instance):
         result = {
