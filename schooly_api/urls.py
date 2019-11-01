@@ -16,6 +16,7 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 from django.urls import path, include
+from common import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,4 +25,8 @@ urlpatterns = [
     url('api/v1/academics/', include('academics.urls')),
     url('api/v1/attendance/', include('attendance.urls')),
     url('api/v1/notifications/', include('notifications.urls')),
+    url('api/v1/downloadcsv',
+        view=views.download_csv,
+        name='download-csv'
+        ),
 ]
