@@ -401,7 +401,6 @@ class SectionViewSet(ModelViewSet):
         # TODO
 
 
-
 class AssessmentViewSet(ModelViewSet):
     serializer_class = serializers.AssessmentSerializer
     queryset = models.Assessment.objects.filter(is_active=True)

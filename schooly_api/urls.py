@@ -25,7 +25,7 @@ urlpatterns = [
     url('api/v1/academics/', include('academics.urls')),
     url('api/v1/attendance/', include('attendance.urls')),
     url('api/v1/notifications/', include('notifications.urls')),
-    url('api/v1/downloadcsv',
+    url('api/v1/download_csv',
         view=views.download_csv,
         name='download-csv'
         ),
