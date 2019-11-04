@@ -385,6 +385,8 @@ class SectionViewSet(ModelViewSet):
 
     def get_section_summary(self, instance):
         result = {
+            'section_name': instance.name,
+            'grade_name': instance.grade.name,
             'students': AccountModels.StudentInfo.objects.filter(is_active=True, section_id=instance.id).count(),
             'subjects': models.SectionSubject.objects.filter(
                 section_id=instance.id, is_active=True).distinct('subject_id').count(),
