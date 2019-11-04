@@ -196,6 +196,8 @@ class SectionViewSet(ModelViewSet):
         params = request.query_params
         queryset = NotificationViewSet.get_filtered_queryset(params)
         paginator = Paginator(queryset.order_by('-created_at'), 10)
+        if 'recent' in params:
+            paginator = Paginator(queryset.order_by('-created_at'), 5)
         if 'page' in params:
             page = paginator.page(int(params['page']))
         else:
