@@ -33,14 +33,21 @@ class TeacherAutocompleteSerializer(serializers.ModelSerializer):
 class StudentProfileSerializer(serializers.ModelSerializer):
 
     gr_number = serializers.SerializerMethodField()
+    gender = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Profile
-        fields = ('id', 'fullname', 'gr_number', 'user_id')
+        fields = ('id', 'fullname', 'gr_number', 'gender', 'user_id')
 
     def get_gr_number(self, obj):
         try:
             return obj.student_info.gr_number
+        except:
+            return None
+
+    def get_gender(self, obj):
+        try:
+            return obj.student_info.gender
         except:
             return None
 
