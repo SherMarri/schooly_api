@@ -12,10 +12,11 @@ from structure.models import Grade, Section
 from accounts import models as AccountModels
 from notifications.views import NotificationViewSet
 from attendance.views import DailyStudentAttendanceViewSet
-from accounts.views import StudentAPIView
+from rest_framework.views import APIView
 from attendance.serializers import DailyStudentAttendanceSerializer
 from attendance.models import StudentAttendanceItem
 from accounts.serializers import StudentSerializer
+from academics.services import exams
 from django.conf import LazySettings
 import os
 import datetime
@@ -477,13 +478,13 @@ class AssessmentViewSet(ModelViewSet):
     @staticmethod
     def get_filtered_queryset(params, section_id):
         queryset = models.Assessment.objects.filter(
-            is_active=True, section_subject__section_id=section_id
+            is_active=True, section_subject__section_id=section_id, exam=None,
         )
         if 'section_subject_id' in params and params['section_subject_id'] != '-1':
             queryset = queryset.filter(section_subject_id=params['section_subject_id'])
-        if 'graded' in params and params['graded'] != '-1':
-            graded_value = True if params['graded'] == 'true' else False
-            queryset = queryset.filter(graded=graded_value)
+        # if 'graded' in params and params['graded'] != '-1':
+        #     graded_value = True if params['graded'] == 'true' else False
+        #     queryset = queryset.filter(graded=graded_value)
         if 'start_date' in params:
             queryset = queryset.filter(date__gte=params['start_date'])
         if 'end_date' in params:
@@ -532,3 +533,34 @@ class SubjectViewSet(ModelViewSet):
         instance.is_active = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ExamsAPIView(APIView):
+    permission_classes = [IsAdmin, ]
+
+    def post(self, request):
+        data = request.data
+        try:
+            if "consolidated" in data:
+                exams.ExamService.create_consolidated_exam(data['name'], data['section'], data['exam_ids'])
+            else:
+                exams.ExamService.create_exam(data['name'], data['section'], data['section_subjects'])
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_201_CREATED)
+
+    def get(self, request):
+        params = request.query_params
+        queryset = models.Exam.objects.filter(is_active=True, section_id=params['section_id'])
+        paginator = Paginator(queryset.order_by('-created_at'), 20)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        serializer = serializers.ExamSerializer(page, many=True)
+        results = {}
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return Response(status=status.HTTP_200_OK, data=results)

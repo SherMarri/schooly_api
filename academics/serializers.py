@@ -5,7 +5,6 @@ from accounts.models import Profile
 from accounts.serializers import StudentSerializer
 
 
-
 class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Subject
@@ -70,7 +69,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Assessment
         fields = ('id', 'name', 'section_subject', 'section_subject_id',
-                  'total_marks', 'date', 'session', 'graded',
+                  'total_marks', 'date', 'session', 'exam',
                   )
 
     def create(self, validated_data):
@@ -93,7 +92,7 @@ class AssessmentDetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Assessment
-        fields = ('id', 'name', 'total_marks', 'date', 'graded', 'section_subject', 'items')
+        fields = ('id', 'name', 'total_marks', 'date', 'exam', 'section_subject', 'items')
 
     def get_items(self, instance):
         queryset = models.StudentAssessment.objects.filter(
@@ -111,3 +110,9 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
         fields = ('id', 'student', 'student_id', 'assessment', 'obtained_marks',
                   'comments',
                   )
+
+
+class ExamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Exam
+        fields = ('id', 'name', 'date', 'consolidated', 'section_id')

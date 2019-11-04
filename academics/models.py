@@ -29,13 +29,30 @@ class SectionSubject(BaseModel):
             self.subject.name, self.section.name, self.section.grade.name)
 
 
+class Exam(BaseModel):
+    name = models.CharField(max_length=128)
+    date = models.DateField()
+    consolidated = models.BooleanField()
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name='exams')
+    session = models.ForeignKey(
+        Session, on_delete=models.SET_NULL, null=True, related_name='exams'
+    )
+
+
 class Assessment(BaseModel):
     name = models.CharField(max_length=128)
-    section_subject = models.ForeignKey(SectionSubject, on_delete=models.CASCADE)
+    exam = models.ForeignKey(
+        Exam, null=True, on_delete=models.SET_NULL, related_name='assessments'
+    )
+    section_subject = models.ForeignKey(
+        SectionSubject, on_delete=models.CASCADE, related_name='assessments'
+    )
     total_marks = models.FloatField()
     date = models.DateField()
-    session = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True)
-    graded = models.BooleanField(default=True)
+    session = models.ForeignKey(
+        Session, on_delete=models.SET_NULL, null=True, related_name='assessments'
+    )
+    consolidated = models.BooleanField(default=False)
 
 
 class StudentAssessment(BaseModel):
