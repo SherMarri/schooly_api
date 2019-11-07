@@ -552,7 +552,7 @@ class ExamsAPIView(APIView):
             if "consolidated" in data:
                 exams.ExamService.create_consolidated_exam(data['name'], data['section'], data['exam_ids'])
             else:
-                exams.ExamService.create_exam(data['name'], data['section'], data['section_subjects'])
+                exams.ExamService.create_exam(data['name'], data['date'], data['section'], data['section_subjects'])
         except Exception as e:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         else:

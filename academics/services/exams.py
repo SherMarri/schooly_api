@@ -9,12 +9,13 @@ class ExamService:
     '''
 
     @staticmethod
-    def create_exam(name, section, section_subjects):
+    def create_exam(name, exam_date, section, section_subjects):
         """
         Creates an exam and their corresponding assessments for students in the given section.
         
         Parameters:
             name (str): Name of the exam
+            exam_date (str): Exam date
             section (Model): Section for which to create the exam
             section_subjects ([dict]): An array of dict containing id and total marks of selected section subject
         
@@ -24,7 +25,7 @@ class ExamService:
         current_session = models.Session.objects.filter(is_active=True).first()
         exam = models.Exam.objects.create(
             name=name, section_id=section['id'],
-            consolidated=False, date=date.today(),
+            consolidated=False, date=exam_date,
             session=current_session
         )
 
@@ -33,7 +34,7 @@ class ExamService:
         for section_subject in section_subjects:
             assessment = models.Assessment(
                 exam=exam, total_marks=section_subject['total_marks'],
-                section_subject_id=section_subject['id'], date=date.today(),
+                section_subject_id=section_subject['id'], date=exam_date,
                 session=current_session
             )
             assessments.append(assessment)
