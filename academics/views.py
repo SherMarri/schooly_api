@@ -385,7 +385,8 @@ class SectionViewSet(ModelViewSet):
 
     @staticmethod
     def get_attendance_row(student, values, dates):
-        return [student] + [round((values['total_presents']/len(dates)) * 100), 1] + [values[date] if date in values else '' for date in dates]
+        average_attendance = round(values['total_presents']/len(dates) * 100, 1)
+        return [student] + [average_attendance] + [values[date] if date in values else '' for date in dates]
 
     def get_section_summary(self, instance):
         result = {
