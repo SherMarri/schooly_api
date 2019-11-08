@@ -81,7 +81,8 @@ class GradeViewSet(ModelViewSet):
             grade = {
                 'id': grade_info.id,
                 'name': grade_info.name,
-                'students': AccountModels.StudentInfo.objects.filter(is_active=True, section__grade_id=grade_info.id).count(),
+                'students': AccountModels.StudentInfo.objects.filter(is_active=True,
+                                                                     section__grade_id=grade_info.id).count(),
                 'subjects': models.SectionSubject.objects.filter(
                     section__grade_id=grade_info.id, is_active=True).distinct('subject_id').count(),
                 'sections': models.Section.objects.filter(grade_id=grade_info.id).count(),
@@ -165,8 +166,8 @@ class GradeViewSet(ModelViewSet):
 
 class SectionViewSet(ModelViewSet):
     queryset = Section.objects.filter(is_active=True)
-    permission_classes = (IsAdmin,)
-    serializer_class = serializers.GradeSerializer
+    # permission_classes = (IsAdmin, IsTeacher)
+    serializer_class = serializers.SectionSerializer
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -178,7 +179,16 @@ class SectionViewSet(ModelViewSet):
         """
         Lists the sections in the system
         """
+        if 'role' in request.query_params and request.query_params['role'] == 'teacher':
+            return self.list_teacher_sections()
         return super().list(request, args, kwargs)
+
+    def list_teacher_sections(self):
+        queryset = models.Section.objects.filter(
+            is_active=True, subjects__teacher_id=self.request.user.id
+        ).select_related('grade')
+        serializer = serializers.SectionSerializer(queryset, many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -190,7 +200,6 @@ class SectionViewSet(ModelViewSet):
             instance = self.get_object()
             return self.get_section_summary(instance)
         return super().retrieve(self, request, args, kwargs)
-
 
     @action(detail=True, methods=['get'])
     def notifications(self, request, pk=None):
@@ -257,9 +266,14 @@ class SectionViewSet(ModelViewSet):
 
     def get_subjects(self):
         instance = self.get_object()
-        queryset = models.SectionSubject.objects.filter(
-            section_id=instance.id, is_active=True,
-        )
+        if 'role' in self.request.query_params and self.request.query_params['role'] == 'teacher':
+            queryset = models.SectionSubject.objects.filter(
+                section_id=instance.id, teacher_id=self.request.user.id, is_active=True,
+            )
+        else:
+            queryset = models.SectionSubject.objects.filter(
+                section_id=instance.id, is_active=True,
+            )
         serializer = serializers.SectionSubjectSerializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
@@ -385,7 +399,8 @@ class SectionViewSet(ModelViewSet):
 
     @staticmethod
     def get_attendance_row(student, values, dates):
-        return [student] + [round((values['total_presents']/len(dates)) * 100), 1] + [values[date] if date in values else '' for date in dates]
+        return [student] + [round((values['total_presents'] / len(dates)) * 100), 1] + [
+            values[date] if date in values else '' for date in dates]
 
     def get_section_summary(self, instance):
         result = {
