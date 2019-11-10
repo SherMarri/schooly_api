@@ -186,7 +186,7 @@ class SectionViewSet(ModelViewSet):
     def list_teacher_sections(self):
         queryset = models.Section.objects.filter(
             is_active=True, subjects__teacher_id=self.request.user.id
-        ).select_related('grade')
+        ).select_related('grade').distinct('id')
         serializer = serializers.SectionSerializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
