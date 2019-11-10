@@ -399,8 +399,8 @@ class SectionViewSet(ModelViewSet):
 
     @staticmethod
     def get_attendance_row(student, values, dates):
-        return [student] + [round((values['total_presents'] / len(dates)) * 100), 1] + [
-            values[date] if date in values else '' for date in dates]
+        average_attendance = round(values['total_presents']/len(dates) * 100, 1)
+        return [student] + [average_attendance] + [values[date] if date in values else '' for date in dates]
 
     def get_section_summary(self, instance):
         result = {
@@ -567,7 +567,7 @@ class ExamsAPIView(APIView):
             if "consolidated" in data:
                 exams.ExamService.create_consolidated_exam(data['name'], data['section'], data['exam_ids'])
             else:
-                exams.ExamService.create_exam(data['name'], data['section'], data['section_subjects'])
+                exams.ExamService.create_exam(data['name'], data['date'], data['section'], data['section_subjects'])
         except Exception as e:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         else:
