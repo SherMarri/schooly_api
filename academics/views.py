@@ -559,7 +559,7 @@ class SubjectViewSet(ModelViewSet):
 
 
 class ExamsAPIView(APIView):
-    permission_classes = [IsAdmin, ]
+    # permission_classes = [IsAdmin, IsTeacher]
 
     def post(self, request):
         data = request.data
@@ -576,6 +576,8 @@ class ExamsAPIView(APIView):
     def get(self, request):
         params = request.query_params
         queryset = models.Exam.objects.filter(is_active=True, section_id=params['section_id'])
+        if 'section_subject_id' in params:
+            queryset = queryset.filter(assessments__section_subject_id=params['section_subject_id'])
         paginator = Paginator(queryset.order_by('-created_at'), 20)
         if 'page' in params:
             page = paginator.page(int(params['page']))
