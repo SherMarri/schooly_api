@@ -12,10 +12,14 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 
 class SectionSerializer(serializers.ModelSerializer):
+    grade = serializers.SerializerMethodField()
+
     class Meta:
         model = Section
         fields = ('id', 'name', 'grade')
 
+    def get_grade(self, instance):
+        return instance.grade.name
 
 class GradeSerializer(serializers.ModelSerializer):
     sections = SectionSerializer(many=True, read_only=True)
