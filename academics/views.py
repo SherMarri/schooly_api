@@ -584,7 +584,6 @@ class ExamsAPIView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
     def get(self, request):
         params = request.query_params
         queryset = models.Exam.objects.filter(is_active=True, section_id=params['section_id'])
