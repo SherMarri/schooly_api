@@ -428,10 +428,13 @@ class SectionViewSet(ModelViewSet):
 class AssessmentViewSet(ModelViewSet):
     serializer_class = serializers.AssessmentSerializer
     queryset = models.Assessment.objects.filter(is_active=True)
-    permission_classes = (IsAdmin,)
+    # permission_classes = (IsAdmin,)
 
     def list(self, request, *args, **kwargs):
-        pass
+        if 'exam_id' in request.query_params:
+            queryset = models.Assessment.objects.filter(exam_id=self.request.query_params['exam_id'])
+            serializer = serializers.AssessmentSerializer(queryset, many=True)
+            return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -589,3 +592,4 @@ class ExamsAPIView(APIView):
         results['page'] = page.number
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
+
