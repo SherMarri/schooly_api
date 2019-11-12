@@ -33,7 +33,7 @@ class ExamService:
 
         for section_subject in section_subjects:
             assessment = models.Assessment(
-                exam=exam, total_marks=section_subject['total_marks'],
+                name=name, exam=exam, total_marks=section_subject['total_marks'],
                 section_subject_id=section_subject['id'], date=exam_date,
                 session=current_session
             )
@@ -99,7 +99,7 @@ class ExamService:
                 total_marks += assessment.total_marks
             
             assessment = models.Assessment(
-                total_marks=total_marks, exam=exam, consolidated=True,
+                name=name, total_marks=total_marks, exam=exam, consolidated=True,
                 section_subject_id=key, date=date.today(), session=current_session
             )
             assessment.save()
