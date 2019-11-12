@@ -62,7 +62,14 @@ class SectionSubjectSerializer(serializers.ModelSerializer):
         }
 
 
+class ExamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Exam
+        fields = ('id', 'name', 'date', 'consolidated', 'section_id')
+
+
 class AssessmentSerializer(serializers.ModelSerializer):
+    exam = ExamSerializer(read_only=True)
     section_subject = SectionSubjectSerializer(read_only=True)
     section_subject_id = serializers.PrimaryKeyRelatedField(
         write_only=True,
@@ -114,9 +121,3 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
         fields = ('id', 'student', 'student_id', 'assessment', 'obtained_marks',
                   'comments',
                   )
-
-
-class ExamSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Exam
-        fields = ('id', 'name', 'date', 'consolidated', 'section_id')
