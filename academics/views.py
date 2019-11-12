@@ -576,6 +576,15 @@ class ExamsAPIView(APIView):
         else:
             return Response(status=status.HTTP_201_CREATED)
 
+    def put(self, request, pk):
+        instance = models.Exam.objects.filter(id=pk).first()
+        serializer = serializers.ExamSerializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
     def get(self, request):
         params = request.query_params
         queryset = models.Exam.objects.filter(is_active=True, section_id=params['section_id'])
