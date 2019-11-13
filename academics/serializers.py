@@ -100,6 +100,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
 class AssessmentDetailsSerializer(serializers.ModelSerializer):
     items = serializers.SerializerMethodField()
     section_subject = SectionSubjectSerializer(read_only=True)
+    exam = ExamSerializer(read_only=True)
 
     class Meta:
         model = models.Assessment

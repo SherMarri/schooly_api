@@ -433,7 +433,13 @@ class AssessmentViewSet(ModelViewSet):
     def list(self, request, *args, **kwargs):
         if 'exam_id' in request.query_params:
             queryset = models.Assessment.objects.filter(exam_id=self.request.query_params['exam_id'])
-            serializer = serializers.AssessmentSerializer(queryset, many=True)
+            if 'section_subject_id' in request.query_params:
+                queryset = queryset.filter(section_subject_id=request.query_params['section_subject_id'])
+                serializer = serializers.AssessmentDetailsSerializer(
+                    queryset, many=True
+                )
+            else:
+                serializer = serializers.AssessmentSerializer(queryset, many=True)
             return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
