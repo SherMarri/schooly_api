@@ -601,3 +601,40 @@ class ExamsAPIView(APIView):
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
 
+
+class StudentResultsAPIView(APIView):
+    # permission_classes = [IsAdmin, IsTeacher]
+
+    def get(self, request, pk):
+        student = models.User.objects.get(id=pk)
+        exams = models.Exam.objects.filter(
+            assessments__items__student_id=pk).distinct().values(
+            'name',
+            'assessments__section_subject__subject__name',
+        ).order_by('assessments__section_subject__subject__name')
+        data = {}
+        exam_subjects = exams.distinct().values_list('assessments__section_subject__subject__name', flat=True)
+        exam_subjects = [assessments__section_subject__subject__name for assessments__section_subject__subject__name in exam_subjects]
+        exam_names = exams.distinct().values_list('name', flat=True).order_by('created_at')
+        exam_names = [name for name in exam_names]
+        results = {}
+        for subject in exam_subjects:
+            results[subject] = {}
+            for exam_name in exam_names:
+                results[subject][exam_name] = exams.filter(
+                    assessments__section_subject__subject__name=subject, name=exam_name,
+                    assessments__items__student_id=pk).values_list(
+                    'assessments__items__obtained_marks', flat=True).first()
+        timestamp = datetime.datetime.now().strftime("%f")
+        fullname = student.profile.fullname.lower().replace(' ', '_')
+        file_name = f'result_card_{fullname}_{timestamp}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(['Test Student'] + exam_names)
+            for subject in exam_subjects:
+                writer.writerow(StudentResultsAPIView.get_row(subject, results[subject]))
+        return Response(status=status.HTTP_200_OK, data=file_name)
+
+    @staticmethod
+    def get_row(key, result):
+        return [key] + list(result.values())
