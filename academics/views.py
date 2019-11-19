@@ -586,6 +586,7 @@ class ExamsAPIView(APIView):
         instance = models.Exam.objects.filter(id=pk).first()
         serializer = serializers.ExamSerializer(instance, data=request.data, partial=True)
         if serializer.is_valid():
+            models.Assessment.objects.filter(exam_id=pk).update(name=request.data['name'])
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
