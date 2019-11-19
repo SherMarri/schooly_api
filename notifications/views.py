@@ -51,7 +51,7 @@ class NotificationViewSet(ModelViewSet):
         if 'target_type' in params and params['target_type'] != '-1':
             queryset = queryset.filter(target_type=params['target_type'])
         else:
-            queryset = queryset.filter(target_type__in=[models.Notification.ORGANIZATION, models.Notification.STAFF])
+            queryset = queryset.filter(target_type__in=[models.Notification.ORGANIZATION, models.Notification.STAFF, models.Notification.TEACHER])
 
         if 'target_id' in params:
             queryset = queryset.filter(target_id=params['target_id'])
