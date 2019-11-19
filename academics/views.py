@@ -399,7 +399,7 @@ class SectionViewSet(ModelViewSet):
 
     @staticmethod
     def get_attendance_row(student, values, dates):
-        average_attendance = round(values['total_presents']/len(dates) * 100, 1)
+        average_attendance = round(values['total_presents'] / len(dates) * 100, 1)
         return [student] + [average_attendance] + [values[date] if date in values else '' for date in dates]
 
     def get_section_summary(self, instance):
@@ -428,6 +428,7 @@ class SectionViewSet(ModelViewSet):
 class AssessmentViewSet(ModelViewSet):
     serializer_class = serializers.AssessmentSerializer
     queryset = models.Assessment.objects.filter(is_active=True)
+
     # permission_classes = (IsAdmin,)
 
     def list(self, request, *args, **kwargs):
@@ -621,27 +622,60 @@ class StudentResultsAPIView(APIView):
         ).order_by('assessments__section_subject__subject__name')
         data = {}
         exam_subjects = exams.distinct().values_list('assessments__section_subject__subject__name', flat=True)
-        exam_subjects = [assessments__section_subject__subject__name for assessments__section_subject__subject__name in exam_subjects]
+        exam_subjects = [assessments__section_subject__subject__name for assessments__section_subject__subject__name in
+                         exam_subjects]
         exam_names = exams.distinct().values_list('name', flat=True).order_by('created_at')
-        exam_names = [name for name in exam_names]
+        exam_names_with_types = exams.distinct().values('name', 'consolidated').order_by('created_at')
+        # exam_names = [name for name in exam_names]
         results = {}
         for subject in exam_subjects:
             results[subject] = {}
             for exam_name in exam_names:
                 results[subject][exam_name] = exams.filter(
                     assessments__section_subject__subject__name=subject, name=exam_name,
-                    assessments__items__student_id=pk).values_list(
-                    'assessments__items__obtained_marks', flat=True).first()
+                    assessments__items__student_id=pk).values(
+                    'assessments__items__obtained_marks', 'assessments__total_marks', 'consolidated').first()
+        finalized_result = {}
+        for key in results:
+            finalized_result[key] = {}
+            for exam in results[key]:
+                if results[key][exam]['consolidated']:
+                    finalized_result[key][exam] = [
+                        results[key][exam]['assessments__total_marks'],
+                        results[key][exam]['assessments__items__obtained_marks'],
+                        round((
+                                results[key][exam]['assessments__items__obtained_marks'] /
+                                results[key][exam]['assessments__total_marks']
+                        ) * 100, 2)
+                    ]
+                else:
+                    finalized_result[key][exam] = [
+                        results[key][exam]['assessments__total_marks'],
+                        results[key][exam]['assessments__items__obtained_marks']
+                    ]
+        exam_max_obtained_marks_row = []
+        exam_name_with_blank_columns = []
+        for exam in exam_names_with_types.all():
+            if exam['consolidated']:
+                exam_name_with_blank_columns += [exam['name'], "", ""]
+                exam_max_obtained_marks_row += ["Max Marks", "Obtained Marks", "Percentage"]
+            else:
+                exam_name_with_blank_columns += [exam['name'], ""]
+                exam_max_obtained_marks_row += ["Max Marks", "Obtained Marks"]
         timestamp = datetime.datetime.now().strftime("%f")
         fullname = student.profile.fullname.lower().replace(' ', '_')
         file_name = f'result_card_{fullname}_{timestamp}.csv'
-        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w', newline='') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow(['Test Student'] + exam_names)
+            writer.writerow([''] + exam_name_with_blank_columns)
+            writer.writerow(['Subject'] + exam_max_obtained_marks_row)
             for subject in exam_subjects:
-                writer.writerow(StudentResultsAPIView.get_row(subject, results[subject]))
+                writer.writerow(StudentResultsAPIView.get_row(subject, finalized_result[subject]))
         return Response(status=status.HTTP_200_OK, data=file_name)
 
     @staticmethod
     def get_row(key, result):
-        return [key] + list(result.values())
+        combined_values = []
+        for item in result.values():
+            combined_values += item
+        return [key] + combined_values
