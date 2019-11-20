@@ -456,7 +456,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         if 'status' in params and params['status'] != 'all':
             if params['status'] == 'paid':
                 queryset = queryset.filter(
-                    total=F('paid') + F('discount')
+                    paid__gte=F('total') - F('discount')
                 )
             if params['status'] == 'unpaid':
                 queryset = queryset.filter(
