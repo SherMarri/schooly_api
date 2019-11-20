@@ -12,10 +12,11 @@ from structure.models import Grade, Section
 from accounts import models as AccountModels
 from notifications.views import NotificationViewSet
 from attendance.views import DailyStudentAttendanceViewSet
-from accounts.views import StudentAPIView
+from rest_framework.views import APIView
 from attendance.serializers import DailyStudentAttendanceSerializer
 from attendance.models import StudentAttendanceItem
 from accounts.serializers import StudentSerializer
+from academics.services import exams
 from django.conf import LazySettings
 import os
 import datetime
@@ -80,7 +81,8 @@ class GradeViewSet(ModelViewSet):
             grade = {
                 'id': grade_info.id,
                 'name': grade_info.name,
-                'students': AccountModels.StudentInfo.objects.filter(is_active=True, section__grade_id=grade_info.id).count(),
+                'students': AccountModels.StudentInfo.objects.filter(is_active=True,
+                                                                     section__grade_id=grade_info.id).count(),
                 'subjects': models.SectionSubject.objects.filter(
                     section__grade_id=grade_info.id, is_active=True).distinct('subject_id').count(),
                 'sections': models.Section.objects.filter(grade_id=grade_info.id).count(),
@@ -148,6 +150,8 @@ class GradeViewSet(ModelViewSet):
         params = request.query_params
         queryset = NotificationViewSet.get_filtered_queryset(params)
         paginator = Paginator(queryset.order_by('-created_at'), 10)
+        if 'recent' in params:
+            paginator = Paginator(queryset.order_by('-created_at'), 5)
         if 'page' in params:
             page = paginator.page(int(params['page']))
         else:
@@ -162,8 +166,8 @@ class GradeViewSet(ModelViewSet):
 
 class SectionViewSet(ModelViewSet):
     queryset = Section.objects.filter(is_active=True)
-    permission_classes = (IsAdmin,)
-    serializer_class = serializers.GradeSerializer
+    # permission_classes = (IsAdmin, IsTeacher)
+    serializer_class = serializers.SectionSerializer
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -175,7 +179,16 @@ class SectionViewSet(ModelViewSet):
         """
         Lists the sections in the system
         """
+        if 'role' in request.query_params and request.query_params['role'] == 'teacher':
+            return self.list_teacher_sections()
         return super().list(request, args, kwargs)
+
+    def list_teacher_sections(self):
+        queryset = models.Section.objects.filter(
+            is_active=True, subjects__teacher_id=self.request.user.id
+        ).select_related('grade').distinct('id')
+        serializer = serializers.SectionSerializer(queryset, many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -188,12 +201,13 @@ class SectionViewSet(ModelViewSet):
             return self.get_section_summary(instance)
         return super().retrieve(self, request, args, kwargs)
 
-
     @action(detail=True, methods=['get'])
     def notifications(self, request, pk=None):
         params = request.query_params
         queryset = NotificationViewSet.get_filtered_queryset(params)
         paginator = Paginator(queryset.order_by('-created_at'), 10)
+        if 'recent' in params:
+            paginator = Paginator(queryset.order_by('-created_at'), 5)
         if 'page' in params:
             page = paginator.page(int(params['page']))
         else:
@@ -252,9 +266,14 @@ class SectionViewSet(ModelViewSet):
 
     def get_subjects(self):
         instance = self.get_object()
-        queryset = models.SectionSubject.objects.filter(
-            section_id=instance.id, is_active=True,
-        )
+        if 'role' in self.request.query_params and self.request.query_params['role'] == 'teacher':
+            queryset = models.SectionSubject.objects.filter(
+                section_id=instance.id, teacher_id=self.request.user.id, is_active=True,
+            )
+        else:
+            queryset = models.SectionSubject.objects.filter(
+                section_id=instance.id, is_active=True,
+            )
         serializer = serializers.SectionSubjectSerializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
@@ -359,9 +378,11 @@ class SectionViewSet(ModelViewSet):
                 student_name = f'{item.student.profile.fullname} ({item.student.profile.student_info.gr_number})'
                 if student_name not in students:
                     students[student_name] = {}
+                    students[student_name]['total_presents'] = 0
                 attendance_status = ''
                 if item.status == StudentAttendanceItem.PRESENT:
                     attendance_status = 'P'
+                    students[student_name]['total_presents'] = students[student_name]['total_presents'] + 1
                 elif item.status == StudentAttendanceItem.ABSENT:
                     attendance_status = 'A'
                 elif item.status == StudentAttendanceItem.LEAVE:
@@ -371,17 +392,20 @@ class SectionViewSet(ModelViewSet):
         file_name = f'attendance_{timestamp}.csv'
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow(['Student'] + dates)
+            writer.writerow(['Student'] + ['Average %'] + dates)
             for key, statuses in students.items():
                 writer.writerow(SectionViewSet.get_attendance_row(key, statuses, dates))
         return Response(status=status.HTTP_200_OK, data=file_name)
 
     @staticmethod
     def get_attendance_row(student, values, dates):
-        return [student] + [values[date] if date in values else '' for date in dates]
+        average_attendance = round(values['total_presents'] / len(dates) * 100, 1)
+        return [student] + [average_attendance] + [values[date] if date in values else '' for date in dates]
 
     def get_section_summary(self, instance):
         result = {
+            'section_name': instance.name,
+            'grade_name': instance.grade.name,
             'students': AccountModels.StudentInfo.objects.filter(is_active=True, section_id=instance.id).count(),
             'subjects': models.SectionSubject.objects.filter(
                 section_id=instance.id, is_active=True).distinct('subject_id').count(),
@@ -401,14 +425,23 @@ class SectionViewSet(ModelViewSet):
         # TODO
 
 
-
 class AssessmentViewSet(ModelViewSet):
     serializer_class = serializers.AssessmentSerializer
     queryset = models.Assessment.objects.filter(is_active=True)
-    permission_classes = (IsAdmin,)
+
+    # permission_classes = (IsAdmin,)
 
     def list(self, request, *args, **kwargs):
-        pass
+        if 'exam_id' in request.query_params:
+            queryset = models.Assessment.objects.filter(exam_id=self.request.query_params['exam_id'])
+            if 'section_subject_id' in request.query_params:
+                queryset = queryset.filter(section_subject_id=request.query_params['section_subject_id'])
+                serializer = serializers.AssessmentDetailsSerializer(
+                    queryset, many=True
+                )
+            else:
+                serializer = serializers.AssessmentSerializer(queryset, many=True)
+            return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -478,13 +511,13 @@ class AssessmentViewSet(ModelViewSet):
     @staticmethod
     def get_filtered_queryset(params, section_id):
         queryset = models.Assessment.objects.filter(
-            is_active=True, section_subject__section_id=section_id
+            is_active=True, section_subject__section_id=section_id, exam=None,
         )
         if 'section_subject_id' in params and params['section_subject_id'] != '-1':
             queryset = queryset.filter(section_subject_id=params['section_subject_id'])
-        if 'graded' in params and params['graded'] != '-1':
-            graded_value = True if params['graded'] == 'true' else False
-            queryset = queryset.filter(graded=graded_value)
+        # if 'graded' in params and params['graded'] != '-1':
+        #     graded_value = True if params['graded'] == 'true' else False
+        #     queryset = queryset.filter(graded=graded_value)
         if 'start_date' in params:
             queryset = queryset.filter(date__gte=params['start_date'])
         if 'end_date' in params:
@@ -533,3 +566,116 @@ class SubjectViewSet(ModelViewSet):
         instance.is_active = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ExamsAPIView(APIView):
+    # permission_classes = [IsAdmin, IsTeacher]
+
+    def post(self, request):
+        data = request.data
+        try:
+            if "consolidated" in data:
+                exams.ExamService.create_consolidated_exam(data['name'], data['section'], data['exam_ids'])
+            else:
+                exams.ExamService.create_exam(data['name'], data['date'], data['section'], data['section_subjects'])
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_201_CREATED)
+
+    def put(self, request, pk):
+        instance = models.Exam.objects.filter(id=pk).first()
+        serializer = serializers.ExamSerializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            models.Assessment.objects.filter(exam_id=pk).update(name=request.data['name'])
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        params = request.query_params
+        queryset = models.Exam.objects.filter(is_active=True, section_id=params['section_id'])
+        if 'section_subject_id' in params:
+            queryset = queryset.filter(assessments__section_subject_id=params['section_subject_id'])
+        paginator = Paginator(queryset.order_by('-created_at'), 20)
+        if 'page' in params:
+            page = paginator.page(int(params['page']))
+        else:
+            page = paginator.page(1)
+        serializer = serializers.ExamSerializer(page, many=True)
+        results = {}
+        results['data'] = serializer.data
+        results['page'] = page.number
+        results['count'] = paginator.count
+        return Response(status=status.HTTP_200_OK, data=results)
+
+
+class StudentResultsAPIView(APIView):
+    # permission_classes = [IsAdmin, IsTeacher]
+
+    def get(self, request, pk):
+        student = models.User.objects.get(id=pk)
+        exams = models.Exam.objects.filter(
+            assessments__items__student_id=pk).distinct().values(
+            'name',
+            'assessments__section_subject__subject__name',
+        ).order_by('assessments__section_subject__subject__name')
+        data = {}
+        exam_subjects = exams.distinct().values_list('assessments__section_subject__subject__name', flat=True)
+        exam_subjects = [assessments__section_subject__subject__name for assessments__section_subject__subject__name in
+                         exam_subjects]
+        exam_names = exams.distinct().values_list('name', flat=True).order_by('created_at')
+        exam_names_with_types = exams.distinct().values('name', 'consolidated').order_by('created_at')
+        # exam_names = [name for name in exam_names]
+        results = {}
+        for subject in exam_subjects:
+            results[subject] = {}
+            for exam_name in exam_names:
+                results[subject][exam_name] = exams.filter(
+                    assessments__section_subject__subject__name=subject, name=exam_name,
+                    assessments__items__student_id=pk).values(
+                    'assessments__items__obtained_marks', 'assessments__total_marks', 'consolidated').first()
+        finalized_result = {}
+        for key in results:
+            finalized_result[key] = {}
+            for exam in results[key]:
+                if results[key][exam]['consolidated']:
+                    finalized_result[key][exam] = [
+                        results[key][exam]['assessments__total_marks'],
+                        results[key][exam]['assessments__items__obtained_marks'],
+                        round((
+                                results[key][exam]['assessments__items__obtained_marks'] /
+                                results[key][exam]['assessments__total_marks']
+                        ) * 100, 2)
+                    ]
+                else:
+                    finalized_result[key][exam] = [
+                        results[key][exam]['assessments__total_marks'],
+                        results[key][exam]['assessments__items__obtained_marks']
+                    ]
+        exam_max_obtained_marks_row = []
+        exam_name_with_blank_columns = []
+        for exam in exam_names_with_types.all():
+            if exam['consolidated']:
+                exam_name_with_blank_columns += [exam['name'], "", ""]
+                exam_max_obtained_marks_row += ["Max Marks", "Obtained Marks", "Percentage"]
+            else:
+                exam_name_with_blank_columns += [exam['name'], ""]
+                exam_max_obtained_marks_row += ["Max Marks", "Obtained Marks"]
+        timestamp = datetime.datetime.now().strftime("%f")
+        fullname = student.profile.fullname.lower().replace(' ', '_')
+        file_name = f'result_card_{fullname}_{timestamp}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w', newline='') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([''] + exam_name_with_blank_columns)
+            writer.writerow(['Subject'] + exam_max_obtained_marks_row)
+            for subject in exam_subjects:
+                writer.writerow(StudentResultsAPIView.get_row(subject, finalized_result[subject]))
+        return Response(status=status.HTTP_200_OK, data=file_name)
+
+    @staticmethod
+    def get_row(key, result):
+        combined_values = []
+        for item in result.values():
+            combined_values += item
+        return [key] + combined_values

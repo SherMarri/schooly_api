@@ -68,6 +68,7 @@ class FeeChallan(BaseModel):
     total = models.FloatField()
     paid = models.FloatField(default=0, null=True, blank=True)
     discount = models.FloatField(default=0, null=True, blank=True)
+    late_fee = models.FloatField(default=0, null=True, blank=True)
     due_date = models.DateField()
     paid_at = models.DateTimeField(null=True, blank=True)
     paid_by = models.CharField(max_length=20, null=True, blank=True)

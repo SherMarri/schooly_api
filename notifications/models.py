@@ -9,17 +9,19 @@ class Notification(BaseModel):
     ORGANIZATION = 1
     CLASS = 2
     SECTION = 3
-    STUDENT = 4
+    STAFF = 4
     TEACHER = 5
     PARENT = 6
+    STUDENT = 7
 
     TargetTypes = (
         (ORGANIZATION, 'Organization'),
         (CLASS, 'Class'),
         (SECTION, 'Section'),
-        (STUDENT, 'Student'),
+        (STAFF, 'Staff'),
         (TEACHER, 'Teacher'),
         (PARENT, 'Parent'),
+        (STUDENT, 'Student'),
     )
 
     title = models.CharField(max_length=50)

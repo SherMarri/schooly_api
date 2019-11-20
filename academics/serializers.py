@@ -5,7 +5,6 @@ from accounts.models import Profile
 from accounts.serializers import StudentSerializer
 
 
-
 class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Subject
@@ -13,10 +12,14 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 
 class SectionSerializer(serializers.ModelSerializer):
+    grade = serializers.SerializerMethodField()
+
     class Meta:
         model = Section
         fields = ('id', 'name', 'grade')
 
+    def get_grade(self, instance):
+        return instance.grade.name
 
 class GradeSerializer(serializers.ModelSerializer):
     sections = SectionSerializer(many=True, read_only=True)
@@ -59,7 +62,14 @@ class SectionSubjectSerializer(serializers.ModelSerializer):
         }
 
 
+class ExamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Exam
+        fields = ('id', 'name', 'date', 'consolidated', 'section_id')
+
+
 class AssessmentSerializer(serializers.ModelSerializer):
+    exam = ExamSerializer(read_only=True)
     section_subject = SectionSubjectSerializer(read_only=True)
     section_subject_id = serializers.PrimaryKeyRelatedField(
         write_only=True,
@@ -70,7 +80,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Assessment
         fields = ('id', 'name', 'section_subject', 'section_subject_id',
-                  'total_marks', 'date', 'session', 'graded',
+                  'total_marks', 'date', 'session', 'exam',
                   )
 
     def create(self, validated_data):
@@ -90,10 +100,11 @@ class AssessmentSerializer(serializers.ModelSerializer):
 class AssessmentDetailsSerializer(serializers.ModelSerializer):
     items = serializers.SerializerMethodField()
     section_subject = SectionSubjectSerializer(read_only=True)
+    exam = ExamSerializer(read_only=True)
 
     class Meta:
         model = models.Assessment
-        fields = ('id', 'name', 'total_marks', 'date', 'graded', 'section_subject', 'items')
+        fields = ('id', 'name', 'total_marks', 'date', 'exam', 'section_subject', 'items')
 
     def get_items(self, instance):
         queryset = models.StudentAssessment.objects.filter(

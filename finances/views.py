@@ -407,8 +407,9 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         challan.paid = challan.paid + data['paid']
+        challan.late_fee = challan.late_fee + data['late_fee']
         challan.discount = serializer.validated_data['discount']
-        challan.paid_at = datetime.now()
+        challan.paid_at = serializer.validated_data['payment_date']
         challan.save()
         self.add_to_transactions(challan, data['paid'])
         serializer = serializers.FeeChallanSerializer(instance=challan)
@@ -455,7 +456,7 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         if 'status' in params and params['status'] != 'all':
             if params['status'] == 'paid':
                 queryset = queryset.filter(
-                    total=F('paid') + F('discount')
+                    paid__gte=F('total') - F('discount')
                 )
             if params['status'] == 'unpaid':
                 queryset = queryset.filter(
@@ -471,29 +472,3 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
 
         return queryset
 
-
-def download_challans_csv(request):
-    file_name = request.GET.get('file_name', None)
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
-    file = open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'))
-    response.content = file
-    return response
-
-
-def download_income_report_csv(request):
-    file_name = request.GET.get('file_name', None)
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
-    file = open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'))
-    response.content = file
-    return response
-
-
-def download_expense_report_csv(request):
-    file_name = request.GET.get('file_name', None)
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
-    file = open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'))
-    response.content = file
-    return response

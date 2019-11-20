@@ -27,17 +27,5 @@ urlpatterns = [
     url(r'^income/summary/$', views.IncomeSummaryAPIView.as_view(),
         name='income-summary'),
     path('income/', include(income_router.urls)),
-    url(r'^income/download_csv',
-        view=views.download_income_report_csv,
-        name='income-report-download-csv'
-    ),
-    url(r'^expense/download_csv',
-        view=views.download_expense_report_csv,
-        name='income-report-download-csv'
-    ),
-    url(r'^fees/challans/download_csv',
-        view=views.download_challans_csv,
-        name='challans-download-csv'
-    ),
     path('fees/', include(fees_router.urls)),
 ]

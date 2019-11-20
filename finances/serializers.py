@@ -164,7 +164,7 @@ class FeeChallanSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.FeeChallan
-        fields = ('id', 'student', 'break_down', 'total', 'paid', 'discount',
+        fields = ('id', 'student', 'break_down', 'total', 'paid', 'late_fee', 'discount',
             'due_date', 'paid_at', 'paid_by', 'description', 'received_by')
         
     def get_break_down(self, obj):
@@ -183,7 +183,9 @@ class FeeChallanSerializer(serializers.ModelSerializer):
 
 class FeeChallanPaymentSerializer(serializers.Serializer):
     paid = serializers.FloatField()
+    late_fee = serializers.FloatField()
     discount = serializers.FloatField()
+    payment_date = serializers.DateTimeField()
 
 
 class ItemFilterSerializer(serializers.Serializer):
