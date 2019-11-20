@@ -185,6 +185,7 @@ class FeeChallanPaymentSerializer(serializers.Serializer):
     paid = serializers.FloatField()
     late_fee = serializers.FloatField()
     discount = serializers.FloatField()
+    payment_date = serializers.DateTimeField()
 
 
 class ItemFilterSerializer(serializers.Serializer):
