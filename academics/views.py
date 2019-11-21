@@ -617,6 +617,7 @@ class StudentResultsAPIView(APIView):
         student = models.User.objects.get(id=pk)
         exams = models.Exam.objects.filter(
             assessments__items__student_id=pk).distinct().values(
+            'id',
             'name',
             'assessments__section_subject__subject__name',
         ).order_by('assessments__section_subject__subject__name')
@@ -639,20 +640,30 @@ class StudentResultsAPIView(APIView):
         for key in results:
             finalized_result[key] = {}
             for exam in results[key]:
-                if results[key][exam]['consolidated']:
-                    finalized_result[key][exam] = [
-                        results[key][exam]['assessments__total_marks'],
-                        results[key][exam]['assessments__items__obtained_marks'],
-                        round((
-                                results[key][exam]['assessments__items__obtained_marks'] /
-                                results[key][exam]['assessments__total_marks']
-                        ) * 100, 2)
-                    ]
+                if results[key][exam]:
+                    if results[key][exam]['consolidated']:
+                        percentage = None
+                        if results[key][exam]['assessments__items__obtained_marks'] is not None:
+                            percentage = round((
+                                    results[key][exam]['assessments__items__obtained_marks'] /
+                                    results[key][exam]['assessments__total_marks']
+                            ) * 100, 2)
+                        finalized_result[key][exam] = [
+                            results[key][exam]['assessments__total_marks'],
+                            results[key][exam]['assessments__items__obtained_marks'],
+                            percentage
+                        ]
+                    else:
+                        finalized_result[key][exam] = [
+                            results[key][exam]['assessments__total_marks'],
+                            results[key][exam]['assessments__items__obtained_marks']
+                        ]
                 else:
-                    finalized_result[key][exam] = [
-                        results[key][exam]['assessments__total_marks'],
-                        results[key][exam]['assessments__items__obtained_marks']
-                    ]
+                    consolidated = exams.filter(name=exam).values_list('consolidated', flat=True).first()
+                    if consolidated:
+                        finalized_result[key][exam] = ['-', '-', '-']
+                    else:
+                        finalized_result[key][exam] = ['-', '-']
         exam_max_obtained_marks_row = []
         exam_name_with_blank_columns = []
         for exam in exam_names_with_types.all():
