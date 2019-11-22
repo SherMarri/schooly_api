@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 
 class Command(BaseCommand):
     """
-    "Creates user groups Admin, Teacher, Staff"
+    Creates user groups Admin, Teacher, Staff
     """
     help = "Creates user groups Admin, Teacher, Staff"
 
