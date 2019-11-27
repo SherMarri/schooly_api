@@ -1,7 +1,8 @@
 from rest_framework import serializers
-
 from accounts import models
 from structure import models as structure_models
+from django.contrib.auth.models import Group
+
 
 class JWTUserDetailsSerializer(serializers.Serializer):
     token = serializers.CharField()
@@ -12,7 +13,7 @@ class JWTUserDetailsSerializer(serializers.Serializer):
         data = {
             'id': user.id,
             'username': user.username,
-            'role': user.profile.get_profile_type_display(),
+            'roles': [group.name for group in user.groups.all()],
             'fullname': user.profile.fullname
         }
         return data
@@ -176,7 +177,6 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
     contact = serializers.CharField(max_length=128)
     gender = serializers.IntegerField()
     address = serializers.CharField(max_length=128)
-    profile_type = serializers.ChoiceField(models.Profile.ProfileTypes)
 
     def validate_user(self, value):
         if self.context['update'] and value is None:
@@ -209,6 +209,9 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
         user.set_password(validated_data['fullname'].replace(' ', ''))
         user.is_active = True
         user.save()
+        staff_group = Group.objects.get(name='Staff')
+        user.groups.add(staff_group)
+
         # Create student info
         info = models.StaffInfo(
             date_hired=validated_data['date_hired'],
@@ -220,7 +223,7 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
         profile = models.Profile(
             user_id=user.id, fullname=validated_data['fullname'],
             contact=validated_data['contact'],
-            staff_info_id=info.id, profile_type=validated_data['profile_type'],
+            staff_info_id=info.id, profile_type=models.Profile.STAFF,
         )
         profile.save()
 
@@ -237,7 +240,6 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
         # update profile
         profile.fullname = validated_data['fullname']
         profile.contact = validated_data['contact']
-        profile.profile_type = validated_data['profile_type']
         profile.save()
 
 
