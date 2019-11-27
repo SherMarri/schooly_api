@@ -13,7 +13,7 @@ class JWTUserDetailsSerializer(serializers.Serializer):
         data = {
             'id': user.id,
             'username': user.username,
-            'role': user.profile.get_profile_type_display(),
+            'roles': [group.name for group in user.groups.all()],
             'fullname': user.profile.fullname
         }
         return data

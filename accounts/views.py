@@ -19,7 +19,6 @@ settings = LazySettings()
 class CustomLoginView(LoginView):
     def get_response(self):
         serializer_class = self.get_response_serializer()
-        groups = Group.objects.values_list('name', flat=True).all()
         if getattr(settings, 'REST_USE_JWT', False):
             data = {
                 'user': self.user,
@@ -30,10 +29,7 @@ class CustomLoginView(LoginView):
         else:
             serializer = serializer_class(instance=self.token,
                                           context={'request': self.request})
-        data = {}
-        data['user'] = serializer.data
-        data['groups'] = list(groups)
-        return Response(data=data, status=status.HTTP_200_OK)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
 class StudentsAutocompleteAPIView(APIView):
