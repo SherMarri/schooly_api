@@ -27,7 +27,7 @@ settings = LazySettings()
 
 class GradeViewSet(ModelViewSet):
     queryset = Grade.objects.filter(is_active=True).prefetch_related('sections')
-    permission_classes = (IsAdmin,)
+    # permission_classes = (IsAdmin,)
     serializer_class = serializers.GradeSerializer
 
     def destroy(self, request, *args, **kwargs):
@@ -44,6 +44,10 @@ class GradeViewSet(ModelViewSet):
         if 'summary' in request.query_params and \
                 request.user.groups.filter(name='Admin').count() > 0:
             return self.list_grades_summary()
+        if 'all' in request.query_params and request.query_params['all'] == 'true':
+            queryset = Grade.objects.prefetch_related('sections')
+            serializer = serializers.GradeSerializer(queryset, many=True)
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
         return super().list(self, request, args, kwargs)
 
     def retrieve(self, request, *args, **kwargs):
