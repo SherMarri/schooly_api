@@ -177,6 +177,7 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
     contact = serializers.CharField(max_length=128)
     gender = serializers.IntegerField()
     address = serializers.CharField(max_length=128)
+    profile_type = serializers.ChoiceField(models.Profile.ProfileTypes)
 
     def validate_user(self, value):
         if self.context['update'] and value is None:
@@ -211,6 +212,12 @@ class CreateUpdateStaffSerializer(serializers.Serializer):
         user.save()
         staff_group = Group.objects.get(name='Staff')
         user.groups.add(staff_group)
+        if validated_data['profile_type'] == models.Profile.ADMIN:
+            admin_group = Group.objects.get(name='Admin')
+            user.groups.add(admin_group)
+        elif validated_data['profile_type'] == models.Profile.TEACHER:
+            teacher_group = Group.objects.get(name='Teacher')
+            user.groups.add(teacher_group)
 
         # Create student info
         info = models.StaffInfo(
