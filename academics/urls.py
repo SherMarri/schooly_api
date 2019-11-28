@@ -12,6 +12,7 @@ router.register('assessments', views.AssessmentViewSet, basename='academics-asse
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('exam-details/<int:pk>/', views.ExamDetailsAPIView.as_view()),
     path('exams/<int:pk>/', views.ExamsAPIView.as_view()),
     path('student-result/<int:pk>/', views.StudentResultsAPIView.as_view()),
     url(
