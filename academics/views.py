@@ -610,6 +610,54 @@ class ExamsAPIView(APIView):
         return Response(status=status.HTTP_200_OK, data=results)
 
 
+class ExamDetailsAPIView(APIView):
+    def get(self, request, pk):
+        assessments = models.Assessment.objects.filter(exam_id=pk).order_by('section_subject__subject__name')
+        exam_subject_names = models.Exam.objects.filter(id=pk).values_list(
+                            'assessments__section_subject__subject__name', flat=True
+                            ).order_by(
+                            'assessments__section_subject__subject__name'
+        )
+        exam_subject_names = [name for name in exam_subject_names]
+        student_results = {}
+        for assessment in assessments.all():
+            for student in assessment.items.all():
+                student_results[student.student.profile.fullname] = {}
+        for assessment in assessments.all():
+            for student in assessment.items.all():
+                student_results[student.student.profile.fullname][
+                    assessment.section_subject.subject.name
+                ] = student.obtained_marks
+                if 'max_marks' in student_results[student.student.profile.fullname]:
+                    student_results[
+                        student.student.profile.fullname][
+                        'max_marks'] += assessment.total_marks
+                else:
+                    student_results[student.student.profile.fullname]['max_marks'] = assessment.total_marks
+
+        timestamp = datetime.datetime.now().strftime("%f")
+        file_name = f'{assessments[0].exam.name}_{timestamp}.csv'
+        with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([''] + exam_subject_names + ['Obtained Marks', 'Maximum Marks', 'Percentage'])
+            for student, result in student_results.items():
+                writer.writerow(ExamDetailsAPIView.get_csv_row(student, result))
+
+        return Response(file_name, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def get_csv_row(student_name, student_result):
+        max_marks = student_result['max_marks']
+        student_result.pop('max_marks')
+        result = list(student_result.values())
+        total_obtained_marks = 0
+        for item in result:
+            if item is not None:
+                total_obtained_marks += item
+        return [student_name] + result + [str(total_obtained_marks)] + [max_marks] + [
+                                f'{round(total_obtained_marks / max_marks * 100, 2)}%']
+
+
 class StudentResultsAPIView(APIView):
     # permission_classes = [IsAdmin, IsTeacher]
 
@@ -645,9 +693,9 @@ class StudentResultsAPIView(APIView):
                         percentage = None
                         if results[key][exam]['assessments__items__obtained_marks'] is not None:
                             percentage = round((
-                                    results[key][exam]['assessments__items__obtained_marks'] /
-                                    results[key][exam]['assessments__total_marks']
-                            ) * 100, 2)
+                                                       results[key][exam]['assessments__items__obtained_marks'] /
+                                                       results[key][exam]['assessments__total_marks']
+                                               ) * 100, 2)
                         finalized_result[key][exam] = [
                             results[key][exam]['assessments__total_marks'],
                             results[key][exam]['assessments__items__obtained_marks'],
