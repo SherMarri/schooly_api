@@ -34,7 +34,7 @@ class ExamService:
         for section_subject in section_subjects:
             assessment = models.Assessment(
                 name=name, exam=exam, total_marks=section_subject['total_marks'],
-                section_subject_id=section_subject['id'], date=exam_date,
+                section_subject_id=section_subject['id'], date=section_subject['date'],
                 session=current_session
             )
             assessments.append(assessment)
