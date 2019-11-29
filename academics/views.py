@@ -599,6 +599,7 @@ class ExamsAPIView(APIView):
     def get(self, request):
         params = request.query_params
         queryset = models.Exam.objects.filter(is_active=True, section_id=params['section_id'])
+        queryset = ExamsAPIView.get_filtered_queryset(queryset, params)
         if 'section_subject_id' in params:
             queryset = queryset.filter(assessments__section_subject_id=params['section_subject_id'])
         paginator = Paginator(queryset.order_by('-created_at'), 20)
@@ -612,6 +613,15 @@ class ExamsAPIView(APIView):
         results['page'] = page.number
         results['count'] = paginator.count
         return Response(status=status.HTTP_200_OK, data=results)
+
+    @staticmethod
+    def get_filtered_queryset(queryset, params):
+        if 'start_date' in params:
+            queryset = queryset.filter(created_at__gte=params['start_date'])
+        if 'end_date' in params:
+            end_date = "%s %s" % (params['end_date'], '23:59:59.000')
+            queryset = queryset.filter(created_at__lte=end_date)
+        return queryset
 
 
 class ExamDetailsAPIView(APIView):
