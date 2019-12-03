@@ -626,33 +626,39 @@ class ExamsAPIView(APIView):
 class ExamDetailsAPIView(APIView):
     def get(self, request, pk):
         assessments = models.Assessment.objects.filter(exam_id=pk).order_by('section_subject__subject__name')
-        exam_subject_names = models.Exam.objects.filter(id=pk).values_list(
-                            'assessments__section_subject__subject__name', flat=True
+        exam_subject_names = models.Exam.objects.filter(id=pk).values(
+                            'assessments__section_subject__subject__name', 'assessments__total_marks',
                             ).order_by(
                             'assessments__section_subject__subject__name'
         )
-        exam_subject_names = [name for name in exam_subject_names]
+        exam_subjects = []
+        for exam_subject in exam_subject_names:
+            exam_subjects.append(
+                f'{exam_subject["assessments__section_subject__subject__name"]}'
+                f' ({int(exam_subject["assessments__total_marks"])})')
         student_results = {}
         for assessment in assessments.all():
             for student in assessment.items.all():
-                student_results[student.student.profile.fullname] = {}
+                key = f'{student.student.profile.fullname} ({student.student.profile.student_info.gr_number})'
+                student_results[key] = {}
         for assessment in assessments.all():
             for student in assessment.items.all():
-                student_results[student.student.profile.fullname][
+                key = f'{student.student.profile.fullname} ({student.student.profile.student_info.gr_number})'
+                student_results[key][
                     assessment.section_subject.subject.name
                 ] = student.obtained_marks
-                if 'max_marks' in student_results[student.student.profile.fullname]:
+                if 'max_marks' in student_results[key]:
                     student_results[
-                        student.student.profile.fullname][
+                        key][
                         'max_marks'] += assessment.total_marks
                 else:
-                    student_results[student.student.profile.fullname]['max_marks'] = assessment.total_marks
+                    student_results[key]['max_marks'] = assessment.total_marks
 
         timestamp = datetime.datetime.now().strftime("%f")
         file_name = f'{assessments[0].exam.name}_{timestamp}.csv'
         with open(os.path.join(settings.BASE_DIR, f'downloadables/{file_name}'), mode='w') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow([''] + exam_subject_names + ['Obtained Marks', 'Maximum Marks', 'Percentage'])
+            writer.writerow([''] + exam_subjects + ['Obtained Marks', 'Maximum Marks', 'Percentage'])
             for student, result in student_results.items():
                 writer.writerow(ExamDetailsAPIView.get_csv_row(student, result))
 
