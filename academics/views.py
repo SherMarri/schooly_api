@@ -617,10 +617,9 @@ class ExamsAPIView(APIView):
     @staticmethod
     def get_filtered_queryset(queryset, params):
         if 'start_date' in params:
-            queryset = queryset.filter(created_at__gte=params['start_date'])
+            queryset = queryset.filter(date__gte=params['start_date'])
         if 'end_date' in params:
-            end_date = "%s %s" % (params['end_date'], '23:59:59.000')
-            queryset = queryset.filter(created_at__lte=end_date)
+            queryset = queryset.filter(date__lte=params['end_date'])
         return queryset
 
 
