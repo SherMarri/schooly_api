@@ -14,13 +14,14 @@ from notifications.views import NotificationViewSet
 from attendance.views import DailyStudentAttendanceViewSet
 from rest_framework.views import APIView
 from attendance.serializers import DailyStudentAttendanceSerializer
-from attendance.models import StudentAttendanceItem
+from attendance.models import StudentAttendanceItem, DailyStudentAttendance
 from accounts.serializers import StudentSerializer
 from academics.services import exams
 from django.conf import LazySettings
 import os
 import datetime
 import csv
+from django.db.models import Avg
 
 settings = LazySettings()
 
@@ -94,6 +95,15 @@ class GradeViewSet(ModelViewSet):
                     section__grade_id=grade_info.id, is_active=True).distinct('teacher_id').count(),
                 'attendance': 0
             }
+            monthly_average = DailyStudentAttendance.objects.filter(
+                section__grade_id=grade_info.id,
+                date__gte=datetime.datetime.today() - datetime.timedelta(days=30),
+                date__lte=datetime.datetime.today()).values_list(
+                'date', flat=True).order_by('date').aggregate(
+                average=Avg('average_attendance'))
+            if monthly_average['average']:
+                grade['attendance'] = round(monthly_average['average'], 0)
+
             grades[grade_info.id] = grade
 
         result = {
@@ -125,8 +135,16 @@ class GradeViewSet(ModelViewSet):
                                                                      section_id=section_info.id).count(),
                 'subjects': models.SectionSubject.objects.filter(
                     section_id=section_info.id, is_active=True).distinct('subject_id').count(),
-                'attendance': 80,
+                'attendance': 0,
             }
+            monthly_average = DailyStudentAttendance.objects.filter(
+                section_id=section_info.id,
+                date__gte=datetime.datetime.today() - datetime.timedelta(days=30),
+                date__lte=datetime.datetime.today()
+            ).values_list('date', flat=True).order_by('date').aggregate(average=Avg(
+                'average_attendance'))
+            if monthly_average['average']:
+                section['attendance'] = round(monthly_average['average'], 0)
             sections[section_info.id] = section
         result = {
             'name': instance.name,
@@ -627,9 +645,9 @@ class ExamDetailsAPIView(APIView):
     def get(self, request, pk):
         assessments = models.Assessment.objects.filter(exam_id=pk).order_by('section_subject__subject__name')
         exam_subject_names = models.Exam.objects.filter(id=pk).values(
-                            'assessments__section_subject__subject__name', 'assessments__total_marks',
-                            ).order_by(
-                            'assessments__section_subject__subject__name'
+            'assessments__section_subject__subject__name', 'assessments__total_marks',
+        ).order_by(
+            'assessments__section_subject__subject__name'
         )
         exam_subjects = []
         for exam_subject in exam_subject_names:
@@ -674,7 +692,7 @@ class ExamDetailsAPIView(APIView):
             if item is not None:
                 total_obtained_marks += item
         return [student_name] + result + [str(total_obtained_marks)] + [max_marks] + [
-                                f'{round(total_obtained_marks / max_marks * 100, 2)}%']
+            f'{round(total_obtained_marks / max_marks * 100, 2)}%']
 
 
 class StudentResultsAPIView(APIView):
