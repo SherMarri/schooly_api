@@ -33,6 +33,7 @@ class DailyStaffAttendance(BaseModel):
         Session, on_delete=models.CASCADE, related_name='staff_attendances'
     )
 
+
 class StudentAttendanceItem(BaseModel):
     attendance = models.ForeignKey(
         DailyStudentAttendance, on_delete=models.SET_NULL, null=True,
@@ -81,6 +82,6 @@ class StaffAttendanceItem(BaseModel):
     status = models.IntegerField(choices=StatusChoices, null=True, blank=True)
     comments = models.TextField(max_length=128, null=True, blank=True)
     submitted_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='submitted_staff_attendances'
+        User, null=True, blank=True, on_delete=models.CASCADE, related_name='submitted_staff_attendances'
     )
     date = models.DateField()
