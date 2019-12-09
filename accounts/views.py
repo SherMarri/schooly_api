@@ -211,6 +211,8 @@ class StaffAPIView(APIView):
         queryset = self.get_filtered_queryset(params)
         if 'dropdown' in params and params['dropdown'] == 'true':
             return self.get_dropdown_list(params)
+        if 'group' in params:
+            return self.get_staff_by_group(params)
 
         if 'download' in params and params['download'] == 'true':
             return self.get_downloadable_link(queryset)
@@ -230,6 +232,19 @@ class StaffAPIView(APIView):
 
     @staticmethod
     def get_dropdown_list(params):
+        group = params.get('group', None)
+        if group is None:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={
+                'message': 'Profile type not found'
+            })
+        queryset = models.User.objects.filter(
+            groups__name=group, is_active=True
+        ).select_related('profile')
+        serializer = serializers.StaffSerializer(queryset, many=True)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
+
+    @staticmethod
+    def get_staff_by_group(params):
         group = params.get('group', None)
         if group is None:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={
@@ -319,3 +334,34 @@ class StaffAPIView(APIView):
             )
 
         return queryset
+
+
+class GroupAPIView(APIView):
+
+    def get_permissions(self):
+        if self.request.method in ['GET']:
+            permission_classes = [IsAdmin | IsHR | IsAccountant]
+        else:
+            permission_classes = [IsAdmin]
+        return [permission_class() for permission_class in permission_classes]
+
+    def post(self, request):
+        data = request.data
+        if 'action' in data:
+            if data['action'] == 'assign':
+                group = Group.objects.get(id=data['group_id'])
+                for user in data['users']:
+                    group.user_set.add(user)
+            elif data['action'] == 'unassign':
+                group = Group.objects.get(id=data['group_id'])
+                user = models.User.objects.filter(id=data['user_id']).first()
+                user.groups.remove(group)
+        return Response(status=status.HTTP_200_OK)
+
+    def get(self, request):
+        queryset = Group.objects.all()
+        serializer = serializers.GroupSerializer(queryset, many=True)
+        return Response(data=serializer.data,status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        pass

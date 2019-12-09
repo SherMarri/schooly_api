@@ -18,4 +18,8 @@ urlpatterns = [
         view=views.StaffAPIView.as_view(),
         name='staff'
     ),
+    path('groups/',
+        view=views.GroupAPIView.as_view(),
+        name='groups'
+    ),
 ]

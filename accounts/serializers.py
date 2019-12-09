@@ -31,6 +31,12 @@ class TeacherAutocompleteSerializer(serializers.ModelSerializer):
         return instance.profile.fullname
 
 
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ('id', 'name', )
+
+
 class StudentProfileSerializer(serializers.ModelSerializer):
 
     gr_number = serializers.SerializerMethodField()
