@@ -230,13 +230,13 @@ class StaffAPIView(APIView):
 
     @staticmethod
     def get_dropdown_list(params):
-        profile_type = params.get('profile_type', None)
-        if profile_type is None:
+        group = params.get('group', None)
+        if group is None:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={
                 'message': 'Profile type not found'
             })
         queryset = models.User.objects.filter(
-            profile__profile_type=profile_type, is_active=True
+            groups__name=group, is_active=True
         ).select_related('profile')
         serializer = serializers.StaffSerializer(queryset, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
