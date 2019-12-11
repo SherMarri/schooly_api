@@ -93,7 +93,7 @@ class DailyStudentAttendanceViewSet(
             lambda x, y: x + 1 if y.status == models.StudentAttendanceItem.PRESENT else x,
             items, 0.0
         )
-        return present / len(items) * 100.0 if len(items) > 0 else 0
+        return round(present / len(items) * 100.0, 0) if len(items) > 0 else 0
 
     @staticmethod
     def get_filtered_queryset(params):
