@@ -41,10 +41,12 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
     gr_number = serializers.SerializerMethodField()
     gender = serializers.SerializerMethodField()
+    section = serializers.SerializerMethodField()
+    guardian_name = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Profile
-        fields = ('id', 'fullname', 'gr_number', 'gender', 'user_id')
+        fields = ('id', 'fullname', 'guardian_name', 'gr_number', 'gender', 'section', 'user_id')
 
     def get_gr_number(self, obj):
         try:
@@ -57,6 +59,25 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             return obj.student_info.gender
         except:
             return None
+
+    def get_guardian_name(self, obj):
+        try:
+            return obj.student_info.guardian_name
+        except:
+            return None
+
+    def get_section(self, obj):
+        try:
+            section = obj.student_info.section
+            return {
+                'id': section.id,
+                'name': section.name,
+                'grade_id': section.grade_id,
+                'grade_name': section.grade.name,
+            }
+        except:
+            return None
+
 
 
 class StaffProfileSerializer(serializers.ModelSerializer):

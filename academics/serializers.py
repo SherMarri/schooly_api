@@ -121,5 +121,14 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.StudentAssessment
         fields = ('id', 'student', 'student_id', 'assessment', 'obtained_marks',
-                  'comments',
-                  )
+                  'comments',)
+
+
+class StudentAssessmentDetailsSerializer(serializers.ModelSerializer):
+    student = StudentSerializer(read_only=True)
+    assessment = AssessmentSerializer(read_only=True)
+
+    class Meta:
+        model = models.StudentAssessment
+        fields = ('id', 'student', 'student_id', 'assessment', 'obtained_marks',
+                  'comments',)

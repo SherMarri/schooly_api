@@ -435,6 +435,8 @@ class ChallanViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
         # TODO rollback payment incase of failure
 
     def apply_filters(self, queryset, params):
+        if 'student_id' in params:
+            queryset = queryset.filter(student_id=params['student_id'])
         if 'from' in params:
             queryset = queryset.filter(due_date__gte=params['from'])
 
