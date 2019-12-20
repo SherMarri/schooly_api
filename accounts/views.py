@@ -52,6 +52,16 @@ class StudentsAutocompleteAPIView(APIView):
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
 
+class StudentDetailsAPIView(APIView):
+    permission_classes = [IsAdmin]
+
+    @staticmethod
+    def get(request, user_id):
+        queryset = models.Profile.objects.get(user_id=user_id)
+        serializer = serializers.StudentDetailsSerializer(queryset)
+        return Response(status=status.HTTP_200_OK, data=serializer.data)
+
+
 class StudentAPIView(APIView):
     permission_classes = [IsAdmin]
 

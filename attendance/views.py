@@ -27,6 +27,10 @@ class DailyStudentAttendanceViewSet(
 
     def list(self, request, *args, **kwargs):
         params = request.query_params
+        if 'student_id' in params:
+            queryset = models.StudentAttendanceItem.objects.filter(student_id=params['student_id'])
+            serializer = serializers.StudentAttendanceItemSerializer(queryset, many=True)
+            return Response(status=status.HTTP_200_OK, data=serializer.data)
         queryset = self.get_filtered_queryset(**params)
         paginator = Paginator(queryset, 30)
         if 'page' in params:

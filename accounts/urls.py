@@ -10,6 +10,10 @@ urlpatterns = [
         view=views.StudentsAutocompleteAPIView.as_view(),
         name='students_autocomplete'
     ),
+    path('students/<int:user_id>/',
+        view=views.StudentDetailsAPIView.as_view(),
+        name='student-details'
+    ),
     path('students/',
         view=views.StudentAPIView.as_view(),
         name='students'

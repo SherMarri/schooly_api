@@ -15,7 +15,7 @@ from attendance.views import DailyStudentAttendanceViewSet
 from rest_framework.views import APIView
 from attendance.serializers import DailyStudentAttendanceSerializer
 from attendance.models import StudentAttendanceItem, DailyStudentAttendance
-from accounts.serializers import StudentSerializer
+from accounts.serializers import StudentSerializer, StudentProfileSerializer
 from academics.services import exams
 from django.conf import LazySettings
 import os
@@ -616,10 +616,12 @@ class ExamsAPIView(APIView):
 
     def get(self, request):
         params = request.query_params
-        queryset = models.Exam.objects.filter(is_active=True, section_id=params['section_id'])
-        queryset = ExamsAPIView.get_filtered_queryset(queryset, params)
+        queryset = models.Exam.objects.filter(is_active=True)
+        if 'section_id' in params:
+            queryset = queryset.filter(section_id=params['section_id'])
         if 'section_subject_id' in params:
             queryset = queryset.filter(assessments__section_subject_id=params['section_subject_id'])
+        queryset = ExamsAPIView.get_filtered_queryset(queryset, params)
         paginator = Paginator(queryset.order_by('-created_at'), 20)
         if 'page' in params:
             page = paginator.page(int(params['page']))
@@ -634,6 +636,8 @@ class ExamsAPIView(APIView):
 
     @staticmethod
     def get_filtered_queryset(queryset, params):
+        if 'student_id' in params:
+            queryset = queryset.filter(assessments__items__student__id=params['student_id']).distinct()
         if 'start_date' in params:
             queryset = queryset.filter(date__gte=params['start_date'])
         if 'end_date' in params:
@@ -643,6 +647,36 @@ class ExamsAPIView(APIView):
 
 class ExamDetailsAPIView(APIView):
     def get(self, request, pk):
+        params = request.query_params
+        if 'student_id' in params:
+            queryset = models.StudentAssessment.objects.filter(assessment__exam_id=pk, student_id=params['student_id'])
+            student_info = AccountModels.Profile.objects.filter(user_id=params['student_id']).first()
+            student_info_serializer = StudentProfileSerializer(student_info)
+            data = {}
+            data['student_info'] = student_info_serializer.data
+            subjects = []
+            total_obtained_marks = 0
+            total_max_marks = 0
+            for subject in queryset.all():
+                name = subject.assessment.section_subject.subject.name
+                subject_name = {}
+                subject_name['name'] = name
+                subject_name['total_marks'] = subject.assessment.total_marks
+                subject_name['obtained_marks'] = subject.obtained_marks
+                subject_name['percentage'] = "-"
+                if subject.obtained_marks:
+                    subject_name['percentage'] = round(subject.obtained_marks / subject.assessment.total_marks * 100, 1)
+                    total_obtained_marks += subject.obtained_marks
+                total_max_marks += subject.assessment.total_marks
+                subjects.append(subject_name)
+            data['subjects'] = subjects
+            data['exam_name'] = queryset[0].assessment.exam.name
+            data['exam_date'] = queryset[0].assessment.exam.date
+            data['total_obtained_marks'] = total_obtained_marks
+            data['total_max_marks'] = total_max_marks
+            data['percentage'] = round(total_obtained_marks / total_max_marks * 100, 1)
+            # serializer = serializers.StudentAssessmentDetailsSerializer(queryset, many=True)
+            return Response(status=status.HTTP_200_OK, data=data)
         assessments = models.Assessment.objects.filter(exam_id=pk).order_by('section_subject__subject__name')
         exam_subject_names = models.Exam.objects.filter(id=pk).values(
             'assessments__section_subject__subject__name', 'assessments__total_marks',
@@ -758,6 +792,13 @@ class StudentResultsAPIView(APIView):
             else:
                 exam_name_with_blank_columns += [exam['name'], ""]
                 exam_max_obtained_marks_row += ["Max Marks", "Obtained Marks"]
+        if 'view' in request.query_params and request.query_params['view'] == 'true':
+            data = {}
+            data['exam_names'] = exam_name_with_blank_columns
+            data['exam_max_obtained_marks_row'] = ['Subject'] + exam_max_obtained_marks_row
+            data['exam_subjects'] = exam_subjects
+            data['finalized_result'] = finalized_result
+            return Response(status=status.HTTP_200_OK, data=data)
         timestamp = datetime.datetime.now().strftime("%f")
         fullname = student.profile.fullname.lower().replace(' ', '_')
         file_name = f'result_card_{fullname}_{timestamp}.csv'
